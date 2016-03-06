@@ -7,6 +7,8 @@ const remote = require('electron').remote;
 const BrowserWindow = remote.require('electron').BrowserWindow;
 const session = remote.require('electron').session;
 
+const isCI = remote.getGlobal('isCi');
+
 describe('chromium feature', function() {
   var fixtures = path.resolve(__dirname, 'fixtures');
   var listener = null;
@@ -84,6 +86,26 @@ describe('chromium feature', function() {
       }, function() {
         done();
       });
+    });
+  });
+
+  describe('navigator.mediaDevices', function() {
+    if (process.env.TRAVIS === 'true') {
+      return;
+    }
+    if (isCI && process.platform === 'linux') {
+      return;
+    }
+
+    it('can return labels of enumerated devices', function(done) {
+      navigator.mediaDevices.enumerateDevices().then((devices) => {
+        const labels = devices.map((device) => device.label);
+        const labelFound = labels.some((label) => !!label);
+        if (labelFound)
+          done();
+        else
+          done('No device labels found: ' + JSON.stringify(labels));
+      }).catch(done);
     });
   });
 

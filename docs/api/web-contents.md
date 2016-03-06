@@ -425,10 +425,12 @@ Returns a `String` representing the user agent for this web page.
 
 Injects CSS into the current web page.
 
-### `webContents.executeJavaScript(code[, userGesture])`
+### `webContents.executeJavaScript(code[, userGesture, callback])`
 
 * `code` String
 * `userGesture` Boolean (optional)
+* `callback` Function (optional) - Called after script has been executed.
+  * `result`
 
 Evaluates `code` in page.
 
@@ -662,10 +664,6 @@ Returns whether the devtools view is focused .
 
 Toggles the developer tools.
 
-### `webContents.isDevToolsFocused()`
-
-Returns whether the developer tools is focused.
-
 ### `webContents.inspectElement(x, y)`
 
 * `x` Integer
@@ -766,11 +764,9 @@ Sends an input `event` to the page.
 
 For keyboard events, the `event` object also have following properties:
 
-* `keyCode` Char or String (**required**) - The character that will be sent
-  as the keyboard event. Can be a single UTF-8 character, or the name of the
-  key that generates the event. Accepted key names are `enter`, `backspace`,
-  `delete`, `tab`, `escape`, `control`, `alt`, `shift`, `end`, `home`, `insert`,
-  `left`, `up`, `right`, `down`, `pageUp`, `pageDown`, `printScreen`
+* `keyCode` String (**required**) - The character that will be sent
+  as the keyboard event. Should only use the valid key codes in
+  [Accelerator](accelerator.md).
 
 For mouse events, the `event` object also have following properties:
 
@@ -841,6 +837,10 @@ win.webContents.on('did-finish-load', function() {
 ### `webContents.session`
 
 Returns the [session](session.md) object used by this webContents.
+
+### `webContents.hostWebContents`
+
+Returns the `WebContents` that might own this `WebContents`.
 
 ### `webContents.devToolsWebContents`
 

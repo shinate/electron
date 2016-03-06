@@ -133,12 +133,17 @@ void NativeWindow::InitFromOptions(const mate::Dictionary& options) {
   if (options.Get(options::kAlwaysOnTop, &top) && top) {
     SetAlwaysOnTop(true);
   }
-#if defined(OS_MACOSX) || defined(OS_WIN)
-  bool fullscreen;
-  if (options.Get(options::kFullscreen, &fullscreen) && fullscreen) {
+  // Disable fullscreen button if 'fullscreen' is specified to false.
+  bool fullscreenable = true;
+  bool fullscreen = false;
+  if (options.Get(options::kFullscreen, &fullscreen) && !fullscreen)
+    fullscreenable = false;
+  // Overriden by 'fullscreenable'.
+  options.Get(options::kFullScreenable, &fullscreenable);
+  SetFullScreenable(fullscreenable);
+  if (fullscreen) {
     SetFullScreen(true);
   }
-#endif
   bool skip;
   if (options.Get(options::kSkipTaskbar, &skip) && skip) {
     SetSkipTaskbar(skip);

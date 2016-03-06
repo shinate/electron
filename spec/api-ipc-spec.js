@@ -1,3 +1,5 @@
+'use strict';
+
 const assert = require('assert');
 const path = require('path');
 
@@ -61,6 +63,16 @@ describe('ipc module', function() {
       var obj = new call.constructor;
       assert.equal(obj.test, 'test');
     });
+
+    it('can reassign and delete its member functions', function() {
+      var remoteFunctions = remote.require(path.join(fixtures, 'module', 'function.js'));
+      assert.equal(remoteFunctions.aFunction(), 1127);
+
+      remoteFunctions.aFunction = function () { return 1234; };
+      assert.equal(remoteFunctions.aFunction(), 1234);
+
+      assert.equal(delete remoteFunctions.aFunction, true);
+    });
   });
 
   describe('remote value in browser', function() {
@@ -98,6 +110,41 @@ describe('ipc module', function() {
     });
   });
 
+  describe('remote class', function() {
+    let cl = remote.require(path.join(fixtures, 'module', 'class.js'));
+    let base = cl.base;
+    let derived = cl.derived;
+
+    it('can get methods', function() {
+      assert.equal(base.method(), 'method');
+    });
+
+    it('can get properties', function() {
+      assert.equal(base.readonly, 'readonly');
+    });
+
+    it('can change properties', function() {
+      assert.equal(base.value, 'old');
+      base.value = 'new';
+      assert.equal(base.value, 'new');
+      base.value = 'old';
+    });
+
+    it('has unenumerable methods', function() {
+      assert(!base.hasOwnProperty('method'));
+      assert(Object.getPrototypeOf(base).hasOwnProperty('method'));
+    });
+
+    it('keeps prototype chain in derived class', function() {
+      assert.equal(derived.method(), 'method');
+      assert.equal(derived.readonly, 'readonly');
+      assert(!derived.hasOwnProperty('method'));
+      let proto = Object.getPrototypeOf(derived);
+      assert(!proto.hasOwnProperty('method'));
+      assert(Object.getPrototypeOf(proto).hasOwnProperty('method'));
+    });
+  });
+
   describe('ipc.sender.send', function() {
     it('should work when sending an object containing id property', function(done) {
       var obj = {
@@ -109,6 +156,15 @@ describe('ipc module', function() {
         done();
       });
       ipcRenderer.send('message', obj);
+    });
+
+    it('can send instance of Date', function(done) {
+      const currentDate = new Date();
+      ipcRenderer.once('message', function(event, value) {
+        assert.equal(value, currentDate.toISOString());
+        done();
+      });
+      ipcRenderer.send('message', currentDate);
     });
   });
 

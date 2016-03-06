@@ -33,6 +33,7 @@ var WebViewImpl = (function() {
     this.on = {};
     this.browserPluginNode = this.createBrowserPluginNode();
     shadowRoot = this.webviewNode.createShadowRoot();
+    shadowRoot.innerHTML = '<style>:host { display: flex; }</style>';
     this.setupWebViewAttributes();
     this.setupFocusPropagation();
     this.viewInstanceId = getNextId();
@@ -279,9 +280,7 @@ var registerBrowserPluginElement = function() {
     this.setAttribute('id', 'browser-plugin-' + getNextId());
 
     // The <object> node fills in the <webview> container.
-    this.style.display = 'block';
-    this.style.width = '100%';
-    return this.style.height = '100%';
+    return this.style.flex = '1 1 auto';
   };
   proto.attributeChangedCallback = function(name, oldValue, newValue) {
     var internal;
@@ -388,10 +387,9 @@ var registerWebViewElement = function() {
     'downloadURL',
     'inspectServiceWorker',
     'print',
-    'printToPDF'
+    'printToPDF',
   ];
   nonblockMethods = [
-    'executeJavaScript',
     'insertCSS',
     'insertText',
     'send',
@@ -422,13 +420,33 @@ var registerWebViewElement = function() {
       var args, internal;
       args = 1 <= arguments.length ? slice.call(arguments, 0) : [];
       internal = v8Util.getHiddenValue(this, 'internal');
-      return ipcRenderer.send.apply(ipcRenderer, ['ATOM_BROWSER_ASYNC_CALL_TO_GUEST_VIEW', internal.guestInstanceId, m].concat(slice.call(args)));
+      return ipcRenderer.send.apply(ipcRenderer, ['ATOM_BROWSER_ASYNC_CALL_TO_GUEST_VIEW', null, internal.guestInstanceId, m].concat(slice.call(args)));
     };
   };
   for (j = 0, len1 = nonblockMethods.length; j < len1; j++) {
     m = nonblockMethods[j];
     proto[m] = createNonBlockHandler(m);
   }
+
+  proto.executeJavaScript = function(code, hasUserGesture, callback) {
+    var internal = v8Util.getHiddenValue(this, 'internal');
+    if (typeof hasUserGesture === "function") {
+      callback = hasUserGesture;
+      hasUserGesture = false;
+    }
+    let requestId = getNextId();
+    ipcRenderer.send('ATOM_BROWSER_ASYNC_CALL_TO_GUEST_VIEW', requestId, internal.guestInstanceId, "executeJavaScript", code, hasUserGesture);
+    ipcRenderer.once(`ATOM_RENDERER_ASYNC_CALL_TO_GUEST_VIEW_RESPONSE_${requestId}`, function(event, result) {
+      if (callback)
+        callback(result);
+    });
+  };
+
+  // WebContents associated with this webview.
+  proto.getWebContents = function() {
+    var internal = v8Util.getHiddenValue(this, 'internal');
+    return internal.webContents;
+  };
 
   // Deprecated.
   deprecate.rename(proto, 'getUrl', 'getURL');
