@@ -17,6 +17,9 @@
 #if defined(OS_WIN)
 #include "atom/browser/ui/win/message_handler_delegate.h"
 #include "atom/browser/ui/win/taskbar_host.h"
+#include "base/win/scoped_gdi_object.h"
+#include "ui/base/win/accessibility_misc_utils.h"
+#include <UIAutomationCoreApi.h>
 #endif
 
 namespace views {
@@ -31,6 +34,8 @@ class WindowStateWatcher;
 
 #if defined(OS_WIN)
 class AtomDesktopWindowTreeHostWin;
+#elif defined(USE_X11)
+class EventDisabler;
 #endif
 
 class NativeWindowViews : public NativeWindow,
@@ -41,7 +46,8 @@ class NativeWindowViews : public NativeWindow,
                           public views::WidgetObserver {
  public:
   NativeWindowViews(brightray::InspectableWebContents* inspectable_web_contents,
-                    const mate::Dictionary& options);
+                    const mate::Dictionary& options,
+                    NativeWindow* parent);
   ~NativeWindowViews() override;
 
   // NativeWindow:
@@ -53,6 +59,7 @@ class NativeWindowViews : public NativeWindow,
   void ShowInactive() override;
   void Hide() override;
   bool IsVisible() override;
+  bool IsEnabled() override;
   void Maximize() override;
   void Unmaximize() override;
   bool IsMaximized() override;
@@ -63,6 +70,7 @@ class NativeWindowViews : public NativeWindow,
   bool IsFullscreen() const override;
   void SetBounds(const gfx::Rect& bounds, bool animate) override;
   gfx::Rect GetBounds() override;
+  gfx::Rect GetContentBounds() override;
   gfx::Size GetContentSize() override;
   void SetContentSizeConstraints(
       const extensions::SizeConstraints& size_constraints) override;
@@ -78,7 +86,7 @@ class NativeWindowViews : public NativeWindow,
   bool IsFullScreenable() override;
   void SetClosable(bool closable) override;
   bool IsClosable() override;
-  void SetAlwaysOnTop(bool top) override;
+  void SetAlwaysOnTop(bool top, const std::string& level) override;
   bool IsAlwaysOnTop() override;
   void Center() override;
   void SetTitle(const std::string& title) override;
@@ -90,11 +98,15 @@ class NativeWindowViews : public NativeWindow,
   void SetBackgroundColor(const std::string& color_name) override;
   void SetHasShadow(bool has_shadow) override;
   bool HasShadow() override;
-  void SetMenu(ui::MenuModel* menu_model) override;
+  void SetIgnoreMouseEvents(bool ignore) override;
+  void SetContentProtection(bool enable) override;
+  void SetFocusable(bool focusable) override;
+  void SetMenu(AtomMenuModel* menu_model) override;
+  void SetParentWindow(NativeWindow* parent) override;
   gfx::NativeWindow GetNativeWindow() override;
   void SetOverlayIcon(const gfx::Image& overlay,
                       const std::string& description) override;
-  void SetProgressBar(double value) override;
+  void SetProgressBar(double progress, const ProgressState state) override;
   void SetAutoHideMenuBar(bool auto_hide) override;
   bool IsMenuBarAutoHide() override;
   void SetMenuBarVisibility(bool visible) override;
@@ -103,6 +115,14 @@ class NativeWindowViews : public NativeWindow,
   bool IsVisibleOnAllWorkspaces() override;
 
   gfx::AcceleratedWidget GetAcceleratedWidget() override;
+
+#if defined(OS_WIN)
+  void SetIcon(HICON small_icon, HICON app_icon);
+#elif defined(USE_X11)
+  void SetIcon(const gfx::ImageSkia& icon);
+#endif
+
+  void SetEnabled(bool enable);
 
   views::Widget* widget() const { return window_.get(); }
 
@@ -125,8 +145,6 @@ class NativeWindowViews : public NativeWindow,
   bool CanMinimize() const override;
   base::string16 GetWindowTitle() const override;
   bool ShouldHandleSystemCommands() const override;
-  gfx::ImageSkia GetWindowAppIcon() override;
-  gfx::ImageSkia GetWindowIcon() override;
   views::Widget* GetWidget() override;
   const views::Widget* GetWidget() const override;
   views::View* GetContentsView() override;
@@ -145,13 +163,12 @@ class NativeWindowViews : public NativeWindow,
   // MessageHandlerDelegate:
   bool PreHandleMSG(
       UINT message, WPARAM w_param, LPARAM l_param, LRESULT* result) override;
-
   void HandleSizeEvent(WPARAM w_param, LPARAM l_param);
 #endif
 
   // NativeWindow:
-  gfx::Size ContentSizeToWindowSize(const gfx::Size& size) override;
-  gfx::Size WindowSizeToContentSize(const gfx::Size& size) override;
+  gfx::Rect ContentBoundsToWindowBounds(const gfx::Rect& bounds) override;
+  gfx::Rect WindowBoundsToContentBounds(const gfx::Rect& bounds) override;
   void HandleKeyboardEvent(
       content::WebContents*,
       const content::NativeWebKeyboardEvent& event) override;
@@ -162,24 +179,27 @@ class NativeWindowViews : public NativeWindow,
   bool AcceleratorPressed(const ui::Accelerator& accelerator) override;
 
   // Register accelerators supported by the menu model.
-  void RegisterAccelerators(ui::MenuModel* menu_model);
+  void RegisterAccelerators(AtomMenuModel* menu_model);
 
   // Returns the restore state for the window.
   ui::WindowShowState GetRestoredState();
 
-  scoped_ptr<views::Widget> window_;
+  std::unique_ptr<views::Widget> window_;
   views::View* web_view_;  // Managed by inspectable_web_contents_.
 
-  scoped_ptr<MenuBar> menu_bar_;
+  std::unique_ptr<MenuBar> menu_bar_;
   bool menu_bar_autohide_;
   bool menu_bar_visible_;
   bool menu_bar_alt_pressed_;
 
 #if defined(USE_X11)
-  scoped_ptr<GlobalMenuBarX11> global_menu_bar_;
+  std::unique_ptr<GlobalMenuBarX11> global_menu_bar_;
 
   // Handles window state events.
-  scoped_ptr<WindowStateWatcher> window_state_watcher_;
+  std::unique_ptr<WindowStateWatcher> window_state_watcher_;
+
+  // To disable the mouse events.
+  std::unique_ptr<EventDisabler> event_disabler_;
 
   // The "resizable" flag on Linux is implemented by setting size constraints,
   // we need to make sure size constraints are restored when window becomes
@@ -195,17 +215,43 @@ class NativeWindowViews : public NativeWindow,
   // to receive the wrong size (#2498). To circumvent that, we keep tabs on the
   // size of the window while in the normal state (not maximized, minimized or
   // fullscreen), so we restore it correctly.
-  gfx::Size last_normal_size_;
+  gfx::Rect last_normal_bounds_;
+
+  // last_normal_bounds_ may or may not require update on WM_MOVE. When a
+  // window is maximized, it is moved (WM_MOVE) to maximum size first and then
+  // sized (WM_SIZE). In this case, last_normal_bounds_ should not update. We
+  // keep last_normal_bounds_candidate_ as a candidate which will become valid
+  // last_normal_bounds_ if the moves are consecutive with no WM_SIZE event in
+  // between.
+  gfx::Rect last_normal_bounds_candidate_;
+
+  bool consecutive_moves_;
 
   // In charge of running taskbar related APIs.
   TaskbarHost taskbar_host_;
+
+  // Memoized version of a11y check
+  bool checked_for_a11y_support_;
+
+  // Whether to show the WS_THICKFRAME style.
+  bool thick_frame_;
+
+  // The bounds of window before maximize/fullscreen.
+  gfx::Rect restore_bounds_;
+
+  // The icons of window and taskbar.
+  base::win::ScopedHICON window_icon_;
+  base::win::ScopedHICON app_icon_;
 #endif
 
   // Handles unhandled keyboard messages coming back from the renderer process.
-  scoped_ptr<views::UnhandledKeyboardEventHandler> keyboard_event_handler_;
+  std::unique_ptr<views::UnhandledKeyboardEventHandler> keyboard_event_handler_;
 
   // Map from accelerator to menu item's command id.
   accelerator_util::AcceleratorTable accelerator_table_;
+
+  // How many times the Disable has been called.
+  int disable_count_;
 
   bool use_content_size_;
   bool movable_;

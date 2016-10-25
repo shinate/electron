@@ -6,15 +6,14 @@ using standard HTML5 APIs, as shown in the following example.
 _main.js_
 
 ```javascript
-const electron = require('electron');
-const app = electron.app;
-const BrowserWindow = electron.BrowserWindow;
+const {app, BrowserWindow} = require('electron')
 
-var onlineStatusWindow;
-app.on('ready', function() {
-  onlineStatusWindow = new BrowserWindow({ width: 0, height: 0, show: false });
-  onlineStatusWindow.loadURL('file://' + __dirname + '/online-status.html');
-});
+let onlineStatusWindow
+
+app.on('ready', () => {
+  onlineStatusWindow = new BrowserWindow({ width: 0, height: 0, show: false })
+  onlineStatusWindow.loadURL(`file://${__dirname}/online-status.html`)
+})
 ```
 
 _online-status.html_
@@ -24,14 +23,14 @@ _online-status.html_
 <html>
 <body>
 <script>
-  var alertOnlineStatus = function() {
-    window.alert(navigator.onLine ? 'online' : 'offline');
-  };
+  const alertOnlineStatus = () => {
+    window.alert(navigator.onLine ? 'online' : 'offline')
+  }
 
-  window.addEventListener('online',  alertOnlineStatus);
-  window.addEventListener('offline',  alertOnlineStatus);
+  window.addEventListener('online',  alertOnlineStatus)
+  window.addEventListener('offline',  alertOnlineStatus)
 
-  alertOnlineStatus();
+  alertOnlineStatus()
 </script>
 </body>
 </html>
@@ -46,20 +45,17 @@ to the main process and handled as needed, as shown in the following example.
 _main.js_
 
 ```javascript
-const electron = require('electron');
-const app = electron.app;
-const ipcMain = electron.ipcMain;
-const BrowserWindow = electron.BrowserWindow;
+const {app, BrowserWindow, ipcMain} = require('electron')
+let onlineStatusWindow
 
-var onlineStatusWindow;
-app.on('ready', function() {
-  onlineStatusWindow = new BrowserWindow({ width: 0, height: 0, show: false });
-  onlineStatusWindow.loadURL('file://' + __dirname + '/online-status.html');
-});
+app.on('ready', () => {
+  onlineStatusWindow = new BrowserWindow({ width: 0, height: 0, show: false })
+  onlineStatusWindow.loadURL(`file://${__dirname}/online-status.html`)
+})
 
-ipcMain.on('online-status-changed', function(event, status) {
-  console.log(status);
-});
+ipcMain.on('online-status-changed', (event, status) => {
+  console.log(status)
+})
 ```
 
 _online-status.html_
@@ -69,16 +65,26 @@ _online-status.html_
 <html>
 <body>
 <script>
-  const ipcRenderer = require('electron').ipcRenderer;
-  var updateOnlineStatus = function() {
-    ipcRenderer.send('online-status-changed', navigator.onLine ? 'online' : 'offline');
-  };
+  const {ipcRenderer} = require('electron')
+  const updateOnlineStatus = () => {
+    ipcRenderer.send('online-status-changed', navigator.onLine ? 'online' : 'offline')
+  }
 
-  window.addEventListener('online',  updateOnlineStatus);
-  window.addEventListener('offline',  updateOnlineStatus);
+  window.addEventListener('online',  updateOnlineStatus)
+  window.addEventListener('offline',  updateOnlineStatus)
 
-  updateOnlineStatus();
+  updateOnlineStatus()
 </script>
 </body>
 </html>
 ```
+
+**NOTE:** If Electron is not able to connect to a local area network (LAN) or
+a router, it is considered offline; all other conditions return `true`.
+So while you can assume that Electron is offline when `navigator.onLine`
+returns a `false` value, you cannot assume that a `true` value necessarily
+means that Electron can access the internet. You could be getting false
+positives, such as in cases where the computer is running a virtualization
+software that has virtual ethernet adapters that are always "connected."
+Therefore, if you really want to determine the internet access status of Electron,
+you should develop additional means for checking.

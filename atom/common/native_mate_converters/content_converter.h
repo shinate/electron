@@ -9,9 +9,9 @@
 
 #include "content/public/browser/permission_type.h"
 #include "content/public/common/menu_item.h"
-#include "content/public/common/permission_status.mojom.h"
 #include "content/public/common/stop_find_action.h"
 #include "native_mate/converter.h"
+#include "third_party/WebKit/public/platform/modules/permissions/permission_status.mojom.h"
 
 namespace content {
 struct ContextMenuParams;
@@ -36,9 +36,9 @@ struct Converter<ContextMenuParamsWithWebContents> {
 };
 
 template<>
-struct Converter<content::PermissionStatus> {
+struct Converter<blink::mojom::PermissionStatus> {
   static bool FromV8(v8::Isolate* isolate, v8::Local<v8::Value> val,
-                     content::PermissionStatus* out);
+                     blink::mojom::PermissionStatus* out);
 };
 
 template<>
@@ -57,6 +57,8 @@ template<>
 struct Converter<content::WebContents*> {
   static v8::Local<v8::Value> ToV8(v8::Isolate* isolate,
                                    content::WebContents* val);
+  static bool FromV8(v8::Isolate* isolate, v8::Local<v8::Value> val,
+                     content::WebContents** out);
 };
 
 }  // namespace mate

@@ -8,11 +8,11 @@ Electron doesn't ship with the Widevine CDM plugin for license reasons, to get
 it, you need to install the official Chrome browser first, which should match
 the architecture and Chrome version of the Electron build you use.
 
-__Note:__ The major version of Chrome browser has to be the same with the Chrome
+**Note:** The major version of Chrome browser has to be the same with the Chrome
 version used by Electron, otherwise the plugin will not work even though
 `navigator.plugins` would show it has been loaded.
 
-### Windows & OS X
+### Windows & macOS
 
 Open `chrome://components/` in Chrome browser, find `WidevineCdm` and make
 sure it is up to date, then you can find all the plugin binaries from the
@@ -20,12 +20,12 @@ sure it is up to date, then you can find all the plugin binaries from the
 directory.
 
 `APP_DATA` is system's location for storing app data, on Windows it is
-`%LOCALAPPDATA%`, on OS X it is `~/Library/Application Support`. `VERSION` is
+`%LOCALAPPDATA%`, on macOS it is `~/Library/Application Support`. `VERSION` is
 Widevine CDM plugin's version string, like `1.4.8.866`. `PLATFORM` is `mac` or
 `win`. `ARCH` is `x86` or `x64`.
 
 On Windows the required binaries are `widevinecdm.dll` and
-`widevinecdmadapter.dll`, on OS X they are `libwidevinecdm.dylib` and
+`widevinecdmadapter.dll`, on macOS they are `libwidevinecdm.dylib` and
 `widevinecdmadapter.plugin`. You can copy them to anywhere you like, but they
 have to be put together.
 
@@ -41,7 +41,7 @@ After getting the plugin files, you should pass the `widevinecdmadapter`'s path
 to Electron with `--widevine-cdm-path` command line switch, and the plugin's
 version with `--widevine-cdm-version` switch.
 
-__Note:__ Though only the `widevinecdmadapter` binary is passed to Electron, the
+**Note:** Though only the `widevinecdmadapter` binary is passed to Electron, the
 `widevinecdm` binary has to be put aside it.
 
 The command line switches have to be passed before the `ready` event of `app`
@@ -51,23 +51,26 @@ enabled.
 Example code:
 
 ```javascript
+const {app, BrowserWindow} = require('electron')
+
 // You have to pass the filename of `widevinecdmadapter` here, it is
-// * `widevinecdmadapter.plugin` on OS X,
+// * `widevinecdmadapter.plugin` on macOS,
 // * `libwidevinecdmadapter.so` on Linux,
 // * `widevinecdmadapter.dll` on Windows.
-app.commandLine.appendSwitch('widevine-cdm-path', '/path/to/widevinecdmadapter.plugin');
+app.commandLine.appendSwitch('widevine-cdm-path', '/path/to/widevinecdmadapter.plugin')
 // The version of plugin can be got from `chrome://plugins` page in Chrome.
-app.commandLine.appendSwitch('widevine-cdm-version', '1.4.8.866');
+app.commandLine.appendSwitch('widevine-cdm-version', '1.4.8.866')
 
-var mainWindow = null;
-app.on('ready', function() {
-  mainWindow = new BrowserWindow({
+let win = null
+app.on('ready', () => {
+  win = new BrowserWindow({
     webPreferences: {
       // The `plugins` have to be enabled.
       plugins: true
     }
   })
-});
+  win.show()
+})
 ```
 
 ## Verifying the plugin

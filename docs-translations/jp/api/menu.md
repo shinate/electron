@@ -64,7 +64,7 @@ var template = [
         label: 'Select All',
         accelerator: 'CmdOrCtrl+A',
         role: 'selectall'
-      },
+      }
     ]
   },
   {
@@ -73,37 +73,38 @@ var template = [
       {
         label: 'Reload',
         accelerator: 'CmdOrCtrl+R',
-        click: function(item, focusedWindow) {
-          if (focusedWindow)
-            focusedWindow.reload();
+        click: function (item, focusedWindow) {
+          if (focusedWindow) focusedWindow.reload()
         }
       },
       {
         label: 'Toggle Full Screen',
-        accelerator: (function() {
-          if (process.platform == 'darwin')
-            return 'Ctrl+Command+F';
-          else
-            return 'F11';
+        accelerator: (function () {
+          if (process.platform === 'darwin') {
+            return 'Ctrl+Command+F'
+          } else {
+            return 'F11'
+          }
         })(),
-        click: function(item, focusedWindow) {
-          if (focusedWindow)
-            focusedWindow.setFullScreen(!focusedWindow.isFullScreen());
+        click: function (item, focusedWindow) {
+          if (focusedWindow) {
+            focusedWindow.setFullScreen(!focusedWindow.isFullScreen())
+          }
         }
       },
       {
         label: 'Toggle Developer Tools',
-        accelerator: (function() {
-          if (process.platform == 'darwin')
-            return 'Alt+Command+I';
-          else
-            return 'Ctrl+Shift+I';
+        accelerator: (function () {
+          if (process.platform === 'darwin') {
+            return 'Alt+Command+I'
+          } else {
+            return 'Ctrl+Shift+I'
+          }
         })(),
-        click: function(item, focusedWindow) {
-          if (focusedWindow)
-            focusedWindow.toggleDevTools();
+        click: function (item, focusedWindow) {
+          if (focusedWindow) focusedWindow.toggleDevTools()
         }
-      },
+      }
     ]
   },
   {
@@ -119,7 +120,7 @@ var template = [
         label: 'Close',
         accelerator: 'CmdOrCtrl+W',
         role: 'close'
-      },
+      }
     ]
   },
   {
@@ -128,14 +129,14 @@ var template = [
     submenu: [
       {
         label: 'Learn More',
-        click: function() { require('electron').shell.openExternal('http://electron.atom.io') }
-      },
+        click: function () { require('electron').shell.openExternal('http://electron.atom.io') }
+      }
     ]
-  },
-];
+  }
+]
 
-if (process.platform == 'darwin') {
-  var name = require('electron').remote.app.getName();
+if (process.platform === 'darwin') {
+  var name = require('electron').remote.app.getName()
   template.unshift({
     label: name,
     submenu: [
@@ -174,10 +175,10 @@ if (process.platform == 'darwin') {
       {
         label: 'Quit',
         accelerator: 'Command+Q',
-        click: function() { app.quit(); }
-      },
+        click: function () { app.quit() }
+      }
     ]
-  });
+  })
   // Window menu.
   template[3].submenu.push(
     {
@@ -187,11 +188,11 @@ if (process.platform == 'darwin') {
       label: 'Bring All to Front',
       role: 'front'
     }
-  );
+  )
 }
 
-var menu = Menu.buildFromTemplate(template);
-Menu.setApplicationMenu(menu);
+var menu = Menu.buildFromTemplate(template)
+Menu.setApplicationMenu(menu)
 ```
 
 ## クラス: Menu
@@ -208,9 +209,9 @@ Menu.setApplicationMenu(menu);
 
 * `menu` Menu
 
-OS Xで、アプリケーションメニューとして`menu`を設定します。WindowsとLinuxでは、`menu`はそれぞれのウィンドウの上のメニューとして設定されます。
+macOSで、アプリケーションメニューとして`menu`を設定します。WindowsとLinuxでは、`menu`はそれぞれのウィンドウの上のメニューとして設定されます。
 
-### `Menu.sendActionToFirstResponder(action)` _OS X_
+### `Menu.sendActionToFirstResponder(action)` _macOS_
 
 * `action` String
 
@@ -229,7 +230,7 @@ OS Xで、アプリケーションメニューとして`menu`を設定します�
 * `browserWindow` BrowserWindow (オプション) - 既定では`null`です。
 * `x` Number (オプション) - 既定では -1です。
 * `y` Number (**必須** `x` が使われている場合) - 既定では -1です。
-* `positioningItem` Number (オプション) _OS X_ - 既定では -1です。
+* `positioningItem` Number (オプション) _macOS_ - 既定では -1です。
 
 メニューアイテムのインデックスを指定した座標にマウスカーソルを配置します。
 
@@ -252,13 +253,13 @@ OS Xで、アプリケーションメニューとして`menu`を設定します�
 
 メニューのアイテムを収容した配列を取得します。
 
-## OS X アプリケーションメニューの注意事項
+## macOS アプリケーションメニューの注意事項
 
-OS Xは、WindowsとLinuxのアプリケーションのメニューとは完全に異なるスタイルを持ち、よりネイティブのようにアプリメニューを作成するのに幾つかの注意事項があります。
+macOSは、WindowsとLinuxのアプリケーションのメニューとは完全に異なるスタイルを持ち、よりネイティブのようにアプリメニューを作成するのに幾つかの注意事項があります。
 
 ### 標準的なメニュー
 
-OS Xでは、`Services`と`Windows`メニューのように定義された標準的な多くのメニューがあります。標準的なメニューを作成するために、メニューの`role`に次のどれかを設定する必要があり、Electronはそれを受けて標準的なメニューを作成します。
+macOSでは、`Services`と`Windows`メニューのように定義された標準的な多くのメニューがあります。標準的なメニューを作成するために、メニューの`role`に次のどれかを設定する必要があり、Electronはそれを受けて標準的なメニューを作成します。
 
 * `window`
 * `help`
@@ -266,11 +267,11 @@ OS Xでは、`Services`と`Windows`メニューのように定義された標準
 
 ### 標準的なメニューアイテムの動作
 
-`About xxx`と`Hide xxx`、`Hide Others`のようないくつかのメニューアイテム用にOS Xは標準的な動作を提供します。メニューアイテムの動作に標準的な動作を設定するために、メニューアイテムの`role`属性を設定すべきです。
+`About xxx`と`Hide xxx`、`Hide Others`のようないくつかのメニューアイテム用にmacOSは標準的な動作を提供します。メニューアイテムの動作に標準的な動作を設定するために、メニューアイテムの`role`属性を設定すべきです。
 
 ### メインのメニュー名
 
-OS Xでは、設定したラベルに関係なく、アプリケーションの最初のアイテムのラベルはいつもアプリの名前です。変更するために、アプリにバンドルされている`Info.plist`ファイルを修正してアプリの名前を変更する必要があります。詳細は、 [About Information Property List Files][AboutInformationPropertyListFiles] を見てください。
+macOSでは、設定したラベルに関係なく、アプリケーションの最初のアイテムのラベルはいつもアプリの名前です。変更するために、アプリにバンドルされている`Info.plist`ファイルを修正してアプリの名前を変更する必要があります。詳細は、 [About Information Property List Files][AboutInformationPropertyListFiles] を見てください。
 
 ## メニューアイテムの位置
 

@@ -8,9 +8,9 @@ menu customizado na dock.
 Este guia explica como integrar suas aplicações no ambiente desktop com a API
 do Electron.
 
-## Documentos Recentes (Windows & OS X)
+## Documentos Recentes (Windows & macOS)
 
-O Windows e o OS X disponibilizam um acesso fácil para a lista de arquivos
+O Windows e o macOS disponibilizam um acesso fácil para a lista de arquivos
 abertos recentemente pela aplicação através do JumpList ou Dock Menu respectivamente.
 
 __JumpList:__
@@ -25,15 +25,15 @@ Para adicionar um arquivo para os documentos recentes, você pode usar a API
 [app.addRecentDocument][addrecentdocument]:
 
 ```javascript
-var app = require('app');
-app.addRecentDocument('/Users/USERNAME/Desktop/work.type');
+var app = require('app')
+app.addRecentDocument('/Users/USERNAME/Desktop/work.type')
 ```
 
 E você pode usar a API [app.clearRecentDocuments][clearrecentdocuments] para
 limpar a lista de documentos recentes.
 
 ```javascript
-app.clearRecentDocuments();
+app.clearRecentDocuments()
 ```
 
 ### Notas para Windows
@@ -48,14 +48,14 @@ Quando um usuário clica em um arquivo na JumpList, uma nova instância da sua a
 deve ser iniciada com o caminho do arquivo adicionado como um argumento de
 linha de comando.
 
-### Notas para OS X
+### Notas para macOS
 
 Quando um arquivo for requisitado pelo menu de documentos recentes, o evento `open-file`
 do módulo `app` irá ser emitido.
 
-## Dock Menu customizado (OS X)
+## Dock Menu customizado (macOS)
 
-OS X permite que desenvolvedores especifiquem um menu customizado para a dock,
+macOS permite que desenvolvedores especifiquem um menu customizado para a dock,
 que normalmente contém alguns atalhos para as funcionalidades mais utilizadas
 da sua aplicação.
 
@@ -64,20 +64,21 @@ __Dock menu do Terminal.app:__
 <img src="https://cloud.githubusercontent.com/assets/639601/5069962/6032658a-6e9c-11e4-9953-aa84006bdfff.png" height="354" width="341" >
 
 Para criar seu Dock Menu customizado, você pode usar a API `app.dock.setMenu`,
-ela está disponível apenas no OS X:
+ela está disponível apenas no macOS:
 
 ```javascript
-var app = require('app');
-var Menu = require('menu');
-var dockMenu = Menu.buildFromTemplate([
-  { label: 'New Window', click: function() { console.log('New Window'); } },
-  { label: 'New Window with Settings', submenu: [
-    { label: 'Basic' },
-    { label: 'Pro'}
+const {app, Menu} = require('electron')
+
+const dockMenu = Menu.buildFromTemplate([
+  {label: 'New Window', click () { console.log('New Window') }},
+  {label: 'New Window with Settings',
+  submenu: [
+    {label: 'Basic'},
+    {label: 'Pro'}
   ]},
-  { label: 'New Command...'}
-]);
-app.dock.setMenu(dockMenu);
+  {label: 'New Command...'}
+])
+app.dock.setMenu(dockMenu)
 ```
 
 ## Tarefas do Usuário (Windows)
@@ -106,7 +107,7 @@ __Tarefas do Internet Explorer:__
 
 ![IE](http://i.msdn.microsoft.com/dynimg/IC420539.png)
 
-Ao contrário do Menu Dock no OS X que é um verdadeiro menu, tarefas do usuário no Windows
+Ao contrário do Menu Dock no macOS que é um verdadeiro menu, tarefas do usuário no Windows
 funcionam como atalhos, de uma forma que quando o usuário clica em uma tarefa, um programa
 deve ser executado com os argumentos especificados.
 
@@ -114,7 +115,7 @@ Para setar tarefas do usuário para sua aplicação, você pode usar a API
 [app.setUserTasks][setusertaskstasks]:
 
 ```javascript
-var app = require('app');
+var app = require('app')
 app.setUserTasks([
   {
     program: process.execPath,
@@ -124,14 +125,14 @@ app.setUserTasks([
     title: 'New Window',
     description: 'Create a new window'
   }
-]);
+])
 ```
 
 Para limpar sua lista de tarefas, apenas chame `app.setUserTasks` com um
 array vazio.
 
 ```javascript
-app.setUserTasks([]);
+app.setUserTasks([])
 ```
 
 As tarefas do usuário são exibidas mesmo depois da aplicação ser fechada,
@@ -163,33 +164,33 @@ __Miniaturas da barra de tarefas do Windows Media Player:__
 Você pode usar [BrowserWindow.setThumbarButtons][setthumbarbuttons] para criar
 miniaturas na barra de ferramentas para sua aplicação.
 
-```
-var BrowserWindow = require('browser-window');
-var path = require('path');
+```javascript
+var BrowserWindow = require('browser-window')
+var path = require('path')
 var win = new BrowserWindow({
   width: 800,
   height: 600
-});
+})
 win.setThumbarButtons([
   {
-    tooltip: "button1",
+    tooltip: 'button1',
     icon: path.join(__dirname, 'button1.png'),
-    click: function() { console.log("button2 clicked"); }
+    click: function () { console.log('button2 clicked') }
   },
   {
-    tooltip: "button2",
+    tooltip: 'button2',
     icon: path.join(__dirname, 'button2.png'),
-    flags:['enabled', 'dismissonclick'],
-    click: function() { console.log("button2 clicked."); }
+    flags: ['enabled', 'dismissonclick'],
+    click: function () { console.log('button2 clicked.') }
   }
-]);
+])
 ```
 
 Para limpar os botões na miniatura da barra de ferramentas, apenas chame
 `BrowserWindow.setThumbarButtons` com um array vazio.
 
 ```javascript
-win.setThumbarButtons([]);
+win.setThumbarButtons([])
 ```
 
 ## Unity Launcher Shortcuts (Linux)
@@ -222,13 +223,13 @@ Para adicionar uma barra de progresso para uma janela, você pode ver a API:
 [BrowserWindow.setProgressBar][setprogressbar]:
 
 ```javascript
-var window = new BrowserWindow({...});
-window.setProgressBar(0.5);
+var window = new BrowserWindow()
+window.setProgressBar(0.5)
 ```
 
-## Representação do arquivo na janela (OS X)
+## Representação do arquivo na janela (macOS)
 
-No OS X, uma janela pode possuir a representação de um arquivo na barra de título,
+No macOS, uma janela pode possuir a representação de um arquivo na barra de título,
 permitindo que ao usuário acionar um Command-Click ou Control-Click sobre o título da janela,
 uma pop-up de navegação entre arquivos é exibida.
 
@@ -244,9 +245,9 @@ Para inserir o arquivo de representacão da janela, você pode usar as API
 [BrowserWindow.setDocumentEdited][setdocumentedited]:
 
 ```javascript
-var window = new BrowserWindow({...});
-window.setRepresentedFilename('/etc/passwd');
-window.setDocumentEdited(true);
+var window = new BrowserWindow()
+window.setRepresentedFilename('/etc/passwd')
+window.setDocumentEdited(true)
 ```
 
 [addrecentdocument]: ../api/app.md#appaddrecentdocumentpath

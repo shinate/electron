@@ -47,17 +47,11 @@ void GetMenuBarColor(SkColor* enabled, SkColor* disabled, SkColor* highlight,
 
 }  // namespace
 
-MenuBar::MenuBar()
+MenuBar::MenuBar(NativeWindow* window)
     : background_color_(kDefaultColor),
-      menu_model_(NULL) {
-#if defined(OS_WIN)
-  background_color_ = color_utils::GetSysSkColor(COLOR_MENUBAR);
-#elif defined(USE_X11)
-  GetMenuBarColor(&enabled_color_, &disabled_color_, &highlight_color_,
-                  &hover_color_, &background_color_);
-#endif
-
-  set_background(views::Background::CreateSolidBackground(background_color_));
+      menu_model_(NULL),
+      window_(window) {
+  UpdateMenuBarColor();
   SetLayoutManager(new views::BoxLayout(
       views::BoxLayout::kHorizontal, 0, 0, 0));
 }
@@ -65,12 +59,14 @@ MenuBar::MenuBar()
 MenuBar::~MenuBar() {
 }
 
-void MenuBar::SetMenu(ui::MenuModel* model) {
+void MenuBar::SetMenu(AtomMenuModel* model) {
   menu_model_ = model;
   RemoveAllChildViews(true);
 
   for (int i = 0; i < model->GetItemCount(); ++i) {
-    SubmenuButton* button = new SubmenuButton(this, model->GetLabelAt(i), this);
+    SubmenuButton* button = new SubmenuButton(model->GetLabelAt(i),
+                                              this,
+                                              background_color_);
     button->set_tag(i);
 
 #if defined(USE_X11)
@@ -104,7 +100,7 @@ int MenuBar::GetAcceleratorIndex(base::char16 key) {
 void MenuBar::ActivateAccelerator(base::char16 key) {
   int i = GetAcceleratorIndex(key);
   if (i != -1)
-    static_cast<SubmenuButton*>(child_at(i))->Activate();
+    static_cast<SubmenuButton*>(child_at(i))->Activate(nullptr);
 }
 
 int MenuBar::GetItemCount() const {
@@ -112,7 +108,7 @@ int MenuBar::GetItemCount() const {
 }
 
 bool MenuBar::GetMenuButtonFromScreenPoint(const gfx::Point& point,
-                                           ui::MenuModel** menu_model,
+                                           AtomMenuModel** menu_model,
                                            views::MenuButton** button) {
   gfx::Point location(point);
   views::View::ConvertPointFromScreen(this, &location);
@@ -124,7 +120,7 @@ bool MenuBar::GetMenuButtonFromScreenPoint(const gfx::Point& point,
   for (int i = 0; i < child_count(); ++i) {
     views::View* view = child_at(i);
     if (view->bounds().Contains(location) &&
-        (menu_model_->GetTypeAt(i) == ui::MenuModel::TYPE_SUBMENU)) {
+        (menu_model_->GetTypeAt(i) == AtomMenuModel::TYPE_SUBMENU)) {
       *menu_model = menu_model_->GetSubmenuModelAt(i);
       *button = static_cast<views::MenuButton*>(view);
       return true;
@@ -138,25 +134,41 @@ const char* MenuBar::GetClassName() const {
   return kViewClassName;
 }
 
-void MenuBar::ButtonPressed(views::Button* sender, const ui::Event& event) {
-}
-
-void MenuBar::OnMenuButtonClicked(views::View* source,
-                                  const gfx::Point& point) {
+void MenuBar::OnMenuButtonClicked(views::MenuButton* source,
+                                  const gfx::Point& point,
+                                  const ui::Event* event) {
   // Hide the accelerator when a submenu is activated.
   SetAcceleratorVisibility(false);
 
   if (!menu_model_)
     return;
 
-  views::MenuButton* button = static_cast<views::MenuButton*>(source);
-  int id = button->tag();
-  ui::MenuModel::ItemType type = menu_model_->GetTypeAt(id);
-  if (type != ui::MenuModel::TYPE_SUBMENU)
+  if (!window_->IsFocused())
+    window_->Focus(true);
+
+  int id = source->tag();
+  AtomMenuModel::ItemType type = menu_model_->GetTypeAt(id);
+  if (type != AtomMenuModel::TYPE_SUBMENU) {
+    menu_model_->ActivatedAt(id, 0);
     return;
+  }
 
   MenuDelegate menu_delegate(this);
-  menu_delegate.RunMenu(menu_model_->GetSubmenuModelAt(id), button);
+  menu_delegate.RunMenu(menu_model_->GetSubmenuModelAt(id), source);
+}
+
+void MenuBar::OnNativeThemeChanged(const ui::NativeTheme* theme) {
+  UpdateMenuBarColor();
+}
+
+void MenuBar::UpdateMenuBarColor() {
+#if defined(OS_WIN)
+  background_color_ = color_utils::GetSysSkColor(COLOR_MENUBAR);
+#elif defined(USE_X11)
+  GetMenuBarColor(&enabled_color_, &disabled_color_, &highlight_color_,
+                  &hover_color_, &background_color_);
+#endif
+  set_background(views::Background::CreateSolidBackground(background_color_));
 }
 
 }  // namespace atom

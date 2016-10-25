@@ -5,12 +5,13 @@
 ## 빌드전 요구 사항
 
 * Windows 7 / Server 2008 R2 또는 최신 버전
-* Visual Studio 2013 Update 4 - [VS 2013 커뮤니티 에디션 무료 다운로드](https://www.visualstudio.com/news/vs2013-community-vs)
+* Visual Studio 2015 - [VS 2015 커뮤니티 에디션 무료 다운로드](https://www.visualstudio.com/en-us/products/visual-studio-community-vs.aspx)
 * [Python 2.7](http://www.python.org/download/releases/2.7/)
 * [Node.js](http://nodejs.org/download/)
 * [Git](http://git-scm.com)
 
-현재 사용하고 있는 PC에 Windows를 설치하지 않았다면 [modern.ie](https://www.modern.ie/en-us/virtualization-tools#downloads)에서
+현재 사용하고 있는 PC에 Windows를 설치하지 않았다면
+[dev.microsoftedge.com](https://developer.microsoft.com/en-us/microsoft-edge/tools/vms/)에서
 사용 기한이 정해져있는 무료 가상머신 버전의 Windows를 받아 Electron을 빌드하는 방법도
 있습니다.
 
@@ -21,18 +22,18 @@ Studio를 사용할 수 없습니다. 하지만 여전히 Electron을 개발할 
 **참고:** Visual Studio가 직접 빌드에 사용되지 않더라도 IDE와 같이 제공된 빌드
 툴체인이 빌드에 **반드시** 사용되므로 여전히 필요합니다.
 
-**참고:** Visual Studio 2015는 사용할 수 없습니다 MSVS **2013** 을 사용하고 있는지
+**참고:** Visual Studio 2013은 사용할 수 없습니다 MSVS **2015** 을 사용하고 있는지
 확인해주세요.
 
 ## 코드 가져오기
 
 ```powershell
-$ git clone https://github.com/atom/electron.git
+$ git clone https://github.com/electron/electron.git
 ```
 
 ## 부트 스트랩
 
-부트스트랩 스크립트는 필수적인 빌드 종속성 라이브러리들을 모두 다운로드하고 프로젝트
+부트스트랩 스크립트는 필수적인 빌드 의존성 라이브러리들을 모두 다운로드하고 프로젝트
 파일을 생성합니다. 참고로 Electron은 `ninja`를 빌드 툴체인으로 사용하므로 Visual
 Studio 프로젝트는 생성되지 않습니다.
 
@@ -41,7 +42,7 @@ $ cd electron
 $ python script\bootstrap.py -v
 ```
 
-## 빌드 하기
+## 빌드하기
 
 `Release` 와 `Debug` 두 타겟 모두 빌드 합니다:
 
@@ -58,46 +59,43 @@ $ python script\build.py -c D
 빌드가 모두 끝나면 `out/D` (디버그 타겟) 또는 `out/R` (릴리즈 타겟) 디렉터리에서
 `electron.exe` 실행 파일을 찾을 수 있습니다.
 
-## 64비트 빌드
+## 32비트 빌드
 
-64비트를 타겟으로 빌드 하려면 부트스트랩 스크립트를 실행할 때 `--target_arch=x64`
-인자를 같이 넘겨주면 됩니다:
+32비트를 타겟으로 빌드 하려면 부트스트랩 스크립트를 실행할 때 `--target_arch=ia32`
+인수를 같이 넘겨주면 됩니다:
 
 ```powershell
-$ python script\bootstrap.py -v --target_arch=x64
+$ python script\bootstrap.py -v --target_arch=ia32
 ```
 
 다른 빌드 단계도 정확하게 같습니다.
 
+## Visual Studio 프로젝트
+
+Visual Studio 프로젝트를 생성하려면, `--msvs` 인수를 전달할 수 있습니다:
+
+```powershell
+$ python script\bootstrap.py --msvs
+```
+
+## 정리하기
+
+빌드 파일들을 정리하려면:
+
+```powershell
+$ npm run clean
+```
+
 ## 테스트
 
-프로젝트 코딩 스타일을 확인하려면:
-
-```powershell
-$ python script\cpplint.py
-```
-
-테스트를 실행하려면:
-
-```powershell
-$ python script\test.py
-```
-
-테스트 실행시 `runas`와 같은 네이티브 모듈을 포함하는데 이 모듈은 디버그 빌드에서 같이
-사용할 수 없습니다. 하지만 여전히 릴리즈 빌드에선 사용할 수 있습니다.
-
-릴리즈 빌드로 테스트를 실행하려면 다음 커맨드를 사용하면 됩니다:
-
-```powershell
-$ python script\test.py -R
-```
+[빌드 시스템 개요: 테스트](build-system-overview.md#tests)를 보세요.
 
 ## 문제 해결
 
 ### Command xxxx not found
 
 만약 `Command xxxx not found`와 같은 형식의 에러가 발생했다면
-`VS2012 Command Prompt` 콘솔로 빌드 스크립트를 실행해볼 필요가 있습니다.
+`VS2015 Command Prompt` 콘솔로 빌드 스크립트를 실행해 보는게 좋습니다.
 
 ### Fatal internal compiler error: C1001
 
@@ -146,4 +144,4 @@ $ mkdir ~\AppData\Roaming\npm
 ### node-gyp is not recognized as an internal or external command
 
 Git Bash로 빌드 했을 때 이러한 에러가 발생할 수 있습니다. 반드시 PowerShell이나
-VS2012 Command Prompt에서 빌드를 진행해야 합니다.
+VS2015 Command Prompt에서 빌드를 진행해야 합니다.

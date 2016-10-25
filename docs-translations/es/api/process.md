@@ -5,8 +5,8 @@ al node convencional:
 
 * `process.type` String - El tipo del proceso puede ser `browser` (ej. proceso
    principal) o `renderer`.
-* `process.versions['electron']` String - Versión de Electron.
-* `process.versions['chrome']` String - Versión de Chromium.
+* `process.versions.electron` String - Versión de Electron.
+* `process.versions.chrome` String - Versión de Chromium.
 * `process.resourcesPath` String - Ruta al código fuente JavaScript.
 
 ## Events
@@ -19,14 +19,14 @@ está comenzando a cargar la página web o el script principal.
 Puede ser usado por el script precargado para añadir de nuevo los símbolos globales
 de Node eliminados, al alcance global cuando la integración de Node está apagada:
 
-```js
+```javascript
 // preload.js
-var _setImmediate = setImmediate;
-var _clearImmediate = clearImmediate;
-process.once('loaded', function() {
-  global.setImmediate = _setImmediate;
-  global.clearImmediate = _clearImmediate;
-});
+var _setImmediate = setImmediate
+var _clearImmediate = clearImmediate
+process.once('loaded', function () {
+  global.setImmediate = _setImmediate
+  global.clearImmediate = _clearImmediate
+})
 ```
 
 ## Methods
@@ -38,7 +38,7 @@ El objeto `process` tiene los siguientes métodos:
 Interrumpe el hilo principal del proceso actual.
 
 
-### process.setFdLimit(maxDescriptors) _OS X_ _Linux_
+### process.setFdLimit(maxDescriptors) _macOS_ _Linux_
 
 * `maxDescriptors` Integer
 

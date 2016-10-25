@@ -43,6 +43,10 @@ const MINIDUMP_TYPE kSmallDumpType = static_cast<MINIDUMP_TYPE>(
 const wchar_t kWaitEventFormat[] = L"$1CrashServiceWaitEvent";
 const wchar_t kPipeNameFormat[] = L"\\\\.\\pipe\\$1 Crash Service";
 
+// Matches breakpad/src/client/windows/common/ipc_protocol.h.
+const int kNameMaxLength = 64;
+const int kValueMaxLength = 64;
+
 typedef NTSTATUS (WINAPI* NtTerminateProcessPtr)(HANDLE ProcessHandle,
                                                  NTSTATUS ExitStatus);
 char* g_real_terminate_process_stub = NULL;
@@ -133,7 +137,9 @@ void UnregisterNonABICompliantCodeRange(void* start) {
 
 }  // namespace
 
-CrashReporterWin::CrashReporterWin() {
+CrashReporterWin::CrashReporterWin()
+    : skip_system_crash_handler_(false),
+      code_range_registered_(false) {
 }
 
 CrashReporterWin::~CrashReporterWin() {
@@ -143,15 +149,10 @@ void CrashReporterWin::InitBreakpad(const std::string& product_name,
                                     const std::string& version,
                                     const std::string& company_name,
                                     const std::string& submit_url,
+                                    const base::FilePath& crashes_dir,
                                     bool auto_submit,
                                     bool skip_system_crash_handler) {
   skip_system_crash_handler_ = skip_system_crash_handler;
-
-  base::FilePath temp_dir;
-  if (!base::GetTempDir(&temp_dir)) {
-    LOG(ERROR) << "Cannot get temp directory";
-    return;
-  }
 
   base::string16 pipe_name = base::ReplaceStringPlaceholders(
       kPipeNameFormat, base::UTF8ToUTF16(product_name), NULL);
@@ -171,7 +172,7 @@ void CrashReporterWin::InitBreakpad(const std::string& product_name,
   breakpad_.reset();
 
   breakpad_.reset(new google_breakpad::ExceptionHandler(
-      temp_dir.value(),
+      crashes_dir.DirName().value(),
       FilterCallback,
       MinidumpCallback,
       this,
@@ -184,19 +185,20 @@ void CrashReporterWin::InitBreakpad(const std::string& product_name,
     LOG(ERROR) << "Cannot initialize out-of-process crash handler";
 
 #ifdef _WIN64
-  bool registered = false;
   // Hook up V8 to breakpad.
-  {
+  if (!code_range_registered_) {
+    code_range_registered_ = true;
     // gin::Debug::SetCodeRangeCreatedCallback only runs the callback when
     // Isolate is just created, so we have to manually run following code here.
     void* code_range = nullptr;
     size_t size = 0;
     v8::Isolate::GetCurrent()->GetCodeRange(&code_range, &size);
-    if (code_range && size)
-      registered = RegisterNonABICompliantCodeRange(code_range, size);
+    if (code_range && size &&
+        RegisterNonABICompliantCodeRange(code_range, size)) {
+      gin::Debug::SetCodeRangeDeletedCallback(
+          UnregisterNonABICompliantCodeRange);
+    }
   }
-  if (registered)
-    gin::Debug::SetCodeRangeDeletedCallback(UnregisterNonABICompliantCodeRange);
 #endif
 }
 
@@ -247,9 +249,18 @@ google_breakpad::CustomClientInfo* CrashReporterWin::GetCustomInfo(
 
   for (StringMap::const_iterator iter = upload_parameters_.begin();
        iter != upload_parameters_.end(); ++iter) {
-    custom_info_entries_.push_back(google_breakpad::CustomInfoEntry(
-        base::UTF8ToWide(iter->first).c_str(),
-        base::UTF8ToWide(iter->second).c_str()));
+    // breakpad has hardcoded the length of name/value, and doesn't truncate
+    // the values itself, so we have to truncate them here otherwise weird
+    // things may happen.
+    std::wstring name = base::UTF8ToWide(iter->first);
+    std::wstring value = base::UTF8ToWide(iter->second);
+    if (name.length() > kNameMaxLength - 1)
+      name.resize(kNameMaxLength - 1);
+    if (value.length() > kValueMaxLength - 1)
+      value.resize(kValueMaxLength - 1);
+
+    custom_info_entries_.push_back(
+        google_breakpad::CustomInfoEntry(name.c_str(), value.c_str()));
   }
 
   custom_info_.entries = &custom_info_entries_.front();

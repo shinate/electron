@@ -27,7 +27,7 @@ La documentation d'Electron a été écrite en suivant les règles ci-dessous :
 - Les arguments optionnels sont indiqués quand appelés dans la liste.
 - La longueur des lignes ne dépasse pas 80 caractères.
 - Les méthodes spécifiques à une plateforme sont notées en italique.
- - ```### `method(foo, bar)` _OS X_```
+ - ```### `method(foo, bar)` _macOS_```
 - Préférer 'in the ___ process' au lieu de 'on'
 
 ### Traductions de la Documentation
@@ -43,7 +43,7 @@ Pour ajouter une nouvelle langue (ou commencer) :
 - Traduire les fichiers.
 - Mettre à jour le `README.md` à l'intérieur du dossier de langue en mettant les
   liens vers les fichiers traduits.
-- Ajouter un lien vers le nouveau dossier de langue dans le [README](https://github.com/atom/electron#documentation-translations)
+- Ajouter un lien vers le nouveau dossier de langue dans le [README](https://github.com/electron/electron#documentation-translations)
   principal d'Electron.
 
 ## Lire la documentation d'Electron
@@ -95,7 +95,7 @@ valeur, elle est écrite en dessous ainsi que son type. Si vous voulez écouter 
 répondre à l'évènement wake-up, ça donne quelque chose comme :
 
 ```javascript
-Alarm.on('wake-up', function(time) {
+Alarm.on('wake-up', function (time) {
   console.log(time)
 })
 ```

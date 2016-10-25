@@ -2,9 +2,11 @@
 
 ## Electronは、いつ最新のChromeにアップグレードされますか?
 
-ElectronのChromeバージョンは、通常、新しいChromeのstabeleバージョンがリリースされた後、1～2週間以内に上げられます。
+ElectronのChromeバージョンは、通常、新しいChromeのstabeleバージョンがリリースされた後、1～2週間以内に上げられます。ただし、この期間というのは保障されてはおらず、またバージョンアップでの作業量に左右されます。
 
 また、Chromeのstableチャンネルのみを使用し、もし、重要な修正がbetaまたはdevチャンネルにある場合、それをバックポートします。
+
+もっと知りたければ、[セキュリティについて](../tutorial/security.md)をご参照ください。
 
 ## Electronは、いつ最新のNode.jsにアップグレードされますか?
 
@@ -20,17 +22,17 @@ Node.js の新しいバージョンがリリースされたとき、私たちは
 // In the main process.
 global.sharedObject = {
   someProperty: 'default value'
-};
+}
 ```
 
 ```javascript
 // In page 1.
-require('remote').getGlobal('sharedObject').someProperty = 'new value';
+require('remote').getGlobal('sharedObject').someProperty = 'new value'
 ```
 
 ```javascript
 // In page 2.
-console.log(require('remote').getGlobal('sharedObject').someProperty);
+console.log(require('remote').getGlobal('sharedObject').someProperty)
 ```
 
 ## 何分か経つと、アプリの Window/tray が消えてしまいます
@@ -47,17 +49,17 @@ console.log(require('remote').getGlobal('sharedObject').someProperty);
 変更前：
 
 ```javascript
-app.on('ready', function() {
-  var tray = new Tray('/path/to/icon.png');
+app.on('ready', function () {
+  var tray = new Tray('/path/to/icon.png')
 })
 ```
 
 変更後：
 
 ```javascript
-var tray = null;
-app.on('ready', function() {
-  tray = new Tray('/path/to/icon.png');
+var tray = null
+app.on('ready', function () {
+  tray = new Tray('/path/to/icon.png')
 })
 ```
 
@@ -69,11 +71,11 @@ Electronに組み込まれているNode.jsの影響で, `module`, `exports`, `re
 
 ```javascript
 // In the main process.
-var mainWindow = new BrowserWindow({
+var win = new BrowserWindow({
   webPreferences: {
     nodeIntegration: false
   }
-});
+})
 ```
 
 しかし、Node.jsとElectron APIを使用した機能を維持したい場合は、ほかのライブラリを読み込む前に、ページのシンボルをリネームする必要があります。
@@ -104,7 +106,7 @@ Uncaught TypeError: Cannot read property 'setZoomLevel' of undefined
 正しい組み込みモジュールを使用しているかを確認するために、`electron`モジュールのパスを出力します。
 
 ```javascript
-console.log(require.resolve('electron'));
+console.log(require.resolve('electron'))
 ```
 
 そして、次の形式かどうかを確認します。
@@ -113,7 +115,7 @@ console.log(require.resolve('electron'));
 "/path/to/Electron.app/Contents/Resources/atom.asar/renderer/api/lib/exports/electron.js"
 ```
 
-If it is something like もし、`node_modules/electron/index.js`　のような形式の場合は、npm `electron` モジュールを削除するか、それをリネームします。
+もし、`node_modules/electron/index.js`　のような形式の場合は、npm `electron` モジュールを削除するか、それをリネームします。
 
 ```bash
 npm uninstall electron

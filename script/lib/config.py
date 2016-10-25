@@ -8,7 +8,8 @@ import sys
 
 BASE_URL = os.getenv('LIBCHROMIUMCONTENT_MIRROR') or \
     'https://s3.amazonaws.com/github-janky-artifacts/libchromiumcontent'
-LIBCHROMIUMCONTENT_COMMIT = 'ff714bf7ad79b0d278bcd20c3081a69b40be8bb8'
+LIBCHROMIUMCONTENT_COMMIT = os.getenv('LIBCHROMIUMCONTENT_COMMIT') or \
+    '82751b122d7f5cbedee5c662acc8cd1f1be8036d'
 
 PLATFORM = {
   'cygwin': 'win32',
@@ -38,23 +39,29 @@ def get_target_arch():
     if e.errno != errno.ENOENT:
       raise
 
-  if PLATFORM == 'win32':
-    return 'ia32'
-  else:
-    return 'x64'
+  return 'x64'
 
 
 def get_chromedriver_version():
-  return 'v2.15'
+  return 'v2.21'
+
+def get_env_var(name):
+  value = os.environ.get('ELECTRON_' + name, '')
+  if not value:
+    # TODO Remove ATOM_SHELL_* fallback values
+    value = os.environ.get('ATOM_SHELL_' + name, '')
+    if value:
+      print 'Warning: Use $ELECTRON_' + name + ' instead of $ATOM_SHELL_' + name
+  return value
 
 
 def s3_config():
-  config = (os.environ.get('ATOM_SHELL_S3_BUCKET', ''),
-            os.environ.get('ATOM_SHELL_S3_ACCESS_KEY', ''),
-            os.environ.get('ATOM_SHELL_S3_SECRET_KEY', ''))
-  message = ('Error: Please set the $ATOM_SHELL_S3_BUCKET, '
-             '$ATOM_SHELL_S3_ACCESS_KEY, and '
-             '$ATOM_SHELL_S3_SECRET_KEY environment variables')
+  config = (get_env_var('S3_BUCKET'),
+            get_env_var('S3_ACCESS_KEY'),
+            get_env_var('S3_SECRET_KEY'))
+  message = ('Error: Please set the $ELECTRON_S3_BUCKET, '
+             '$ELECTRON_S3_ACCESS_KEY, and '
+             '$ELECTRON_S3_SECRET_KEY environment variables')
   assert all(len(c) for c in config), message
   return config
 
@@ -67,3 +74,13 @@ def enable_verbose_mode():
 
 def is_verbose_mode():
   return verbose_mode
+
+
+def get_zip_name(name, version, suffix=''):
+  arch = get_target_arch()
+  if arch == 'arm':
+    arch += 'v7l'
+  zip_name = '{0}-{1}-{2}-{3}'.format(name, version, get_platform_key(), arch)
+  if suffix:
+    zip_name += '-' + suffix
+  return zip_name + '.zip'

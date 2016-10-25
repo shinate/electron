@@ -1,13 +1,14 @@
 # Build System Overview
 
-Electron uses `gyp` for project generation and `ninja` for building. Project
-configurations can be found in the `.gyp` and `.gypi` files.
+Electron uses [gyp](https://gyp.gsrc.io/) for project generation and
+[ninja](https://ninja-build.org/) for building. Project configurations can
+be found in the `.gyp` and `.gypi` files.
 
 ## Gyp Files
 
 Following `gyp` files contain the main rules for building Electron:
 
-* `atom.gyp` defines how Electron itself is built.
+* `electron.gyp` defines how Electron itself is built.
 * `common.gypi` adjusts the build configurations of Node to make it build
   together with Chromium.
 * `vendor/brightray/brightray.gyp` defines how `brightray` is built and
@@ -70,3 +71,52 @@ to generate one target at a time as stated above.
 
 This only affects developers, if you are just building Electron for rebranding
 you are not affected.
+
+## Tests
+
+Test your changes conform to the project coding style using:
+
+```bash
+$ npm run lint
+```
+
+Test functionality using:
+
+```bash
+$ npm test
+```
+
+Whenever you make changes to Electron source code, you'll need to re-run the
+build before the tests:
+
+```bash
+$ npm run build && npm test
+```
+
+You can make the test suite run faster by isolating the specific test or block
+you're currently working on using Mocha's
+[exclusive tests](https://mochajs.org/#exclusive-tests) feature. Just append
+`.only` to any `describe` or `it` function call:
+
+```js
+describe.only('some feature', function () {
+  // ... only tests in this block will be run
+})
+```
+
+Alternatively, you can use mocha's `grep` option to only run tests matching the
+given regular expression pattern:
+
+```sh
+$ npm test -- --grep child_process
+```
+
+Tests that include native modules (e.g. `runas`) can't be executed with the
+debug build (see [#2558](https://github.com/electron/electron/issues/2558) for
+details), but they will work with the release build.
+
+To run the tests with the release build use:
+
+```bash
+$ npm test -- -R
+```

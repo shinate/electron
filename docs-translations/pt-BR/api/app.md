@@ -2,13 +2,13 @@
 
 O módulo `app` é responsável por controlar o ciclo de vida do aplicativo.
 
-O exemplo a seguir mostra como fechar o aplicativo quando a última janela é fechada: 
+O exemplo a seguir mostra como fechar o aplicativo quando a última janela é fechada:
 
 ```javascript
-const app = require('electron').app;
-app.on('window-all-closed', function() {
-  app.quit();
-});
+const app = require('electron').app
+app.on('window-all-closed', function () {
+  app.quit()
+})
 ```
 
 ## Eventos
@@ -18,7 +18,7 @@ O objeto `app` emite os seguintes eventos:
 ### Evento: 'will-finish-launching'
 
 Emitido quando o aplicativo finaliza a inicialização básica. No Windows e no Linux,
-o evento `will-finish-launching` é o mesmo que o evento `ready`; No OS X,
+o evento `will-finish-launching` é o mesmo que o evento `ready`; No macOS,
 esse evento representa a notificação `applicationWillFinishLaunching` do `NSApplication`.
 Normalmente aqui seriam criados *listeners* para os eventos `open-file` e `open-url`, e inicializar o *crash reporter* e atualizador automático.
 
@@ -65,7 +65,7 @@ evento `will-quit` e `window-all-closed`.
 
 Emitido quando o aplicativo está finalizando.
 
-### Evento: 'open-file' _OS X_
+### Evento: 'open-file' _macOS_
 
 Retorna:
 
@@ -85,7 +85,7 @@ Você deve chamar `event.preventDefault()` se quiser cuidar deste caso.
 No Windows, você deve fazer o *parse* do `process.argv` para pegar o
 endereço do arquivo.
 
-### Evento: 'open-url' _OS X_
+### Evento: 'open-url' _macOS_
 
 Retorna:
 
@@ -97,7 +97,7 @@ ser registrado para ser aberto pelo seu aplicativo.
 
 Você deve chamar `event.preventDefault()` se quiser cuidar deste caso.
 
-### Evento: 'activate' _OS X_
+### Evento: 'activate' _macOS_
 
 Retorna:
 
@@ -152,15 +152,15 @@ para confiar no certificado, você deve impedir o comportamento padrão com
 `event.preventDefault()` e chamar `callback(true)`.
 
 ```javascript
-session.on('certificate-error', function(event, webContents, url, error, certificate, callback) {
-  if (url == "https://github.com") {
+session.on('certificate-error', function (event, webContents, url, error, certificate, callback) {
+  if (url === 'https://github.com') {
     // Lógica de verificação.
-    event.preventDefault();
-    callback(true);
+    event.preventDefault()
+    callback(true)
   } else {
-    callback(false);
+    callback(false)
   }
-});
+})
 ```
 
 ### Evento: 'select-client-certificate'
@@ -183,9 +183,9 @@ Usar `event.preventDefault()` impede o aplicativo de usar o primeiro certificado
 da memória.
 
 ```javascript
-app.on('select-client-certificate', function(event, webContents, url, list, callback) {
-  event.preventDefault();
-  callback(list[0]);
+app.on('select-client-certificate', function (event, webContents, url, list, callback) {
+  event.preventDefault()
+  callback(list[0])
 })
 ```
 
@@ -214,9 +214,9 @@ isto, você deve impedir esse comportamento com `event.preventDefault()` e
 chamar `callback(username, password)` com as credenciais.
 
 ```javascript
-app.on('login', function(event, webContents, request, authInfo, callback) {
-  event.preventDefault();
-  callback('username', 'secret');
+app.on('login', function (event, webContents, request, authInfo, callback) {
+  event.preventDefault()
+  callback('username', 'secret')
 })
 ```
 
@@ -266,7 +266,7 @@ Você pode requisitar os seguintes endereços pelo nome:
 * `appData` Diretório de dados do aplicativo por usuário, que por padrão aponta para:
   * `%APPDATA%` no Windows
   * `$XDG_CONFIG_HOME` ou `~/.config` no Linux
-  * `~/Library/Application Support` no OS X
+  * `~/Library/Application Support` no macOS
 * `userData` O diretório para guardar os arquivos de configuração do seu aplicativo,  que por padrão é o diretório `appData` concatenado com o nome do seu aplicativo.
 * `temp` Diretório temporário.
 * `exe` O arquivo executável atual.
@@ -312,16 +312,16 @@ seu aplicativo, e que será preferido ao `name` pelo Electron.
 
 Retorna a localidade atual do aplicativo.
 
-### `app.addRecentDocument(path)` _OS X_ _Windows_
+### `app.addRecentDocument(path)` _macOS_ _Windows_
 
 * `path` String
 
 Adiciona `path` à lista de documentos recentes.
 
 Esta lista é gerenciada pelo S.O.. No Windows você pode visitar a lista pela
-barra de tarefas, e no OS X você pode visita-la pelo *dock*.
+barra de tarefas, e no macOS você pode visita-la pelo *dock*.
 
-### `app.clearRecentDocuments()` _OS X_ _Windows_
+### `app.clearRecentDocuments()` _macOS_ _Windows_
 
 Limpa a lista de documentos recentes.
 
@@ -361,30 +361,27 @@ Normalmente aplicativos respondem à isso não minimizando sua janela primária 
 
 Este método retorna `false` caso seu processo seja a instância primária do aplicativo e seu aplicativo deve continuar carregando. E retorna `true` caso seu processo tenha enviado seus parâmetros para outra instância, e você deve imediatamente finalizar.
 
-No OS X o sistema enforça instância única automaticamente quando usuários tentam abrir uma segunda instância do seu aplicativo no *Finder*, e os eventos `open-file` e `open-url` serão emitidos para isso. Entretanto, quando usuários inicializam seu aplicativo na linha de comando, o mecanismo de instância única do sistema será ignorado e você terá de utilizar esse método para assegurar-se de ter uma instância única.
+No macOS o sistema enforça instância única automaticamente quando usuários tentam abrir uma segunda instância do seu aplicativo no *Finder*, e os eventos `open-file` e `open-url` serão emitidos para isso. Entretanto, quando usuários inicializam seu aplicativo na linha de comando, o mecanismo de instância única do sistema será ignorado e você terá de utilizar esse método para assegurar-se de ter uma instância única.
 
 Um exemplo de ativação da janela de primeira instância quando uma segunda instância inicializa:
 
-```js
-var myWindow = null;
+```javascript
+let myWindow = null
 
-var shouldQuit = app.makeSingleInstance(function(commandLine, workingDirectory) {
+let shouldQuit = app.makeSingleInstance(function (commandLine, workingDirectory) {
   // Alguém tentou rodar uma segunda instância, devemos focar nossa janela
   if (myWindow) {
-    if (myWindow.isMinimized()) myWindow.restore();
-    myWindow.focus();
+    if (myWindow.isMinimized()) myWindow.restore()
+    myWindow.focus()
   }
-  return true;
-});
+  return true
+})
 
-if (shouldQuit) {
-  app.quit();
-  return;
-}
+if (shouldQuit) app.quit()
 
-// Cria myWindow, carrega o resto do aplicativo, etc...
-app.on('ready', function() {
-});
+app.on('ready', function () {
+  // Cria myWindow, carrega o resto do aplicativo, etc...
+})
 ```
 
 ### `app.setAppUserModelId(id)` _Windows_
@@ -405,7 +402,7 @@ Adiciona um argumento à linha de comando do Chromium. O argumento será passado
 
 **Nota:** Isto não irá afetar `process.argv`.
 
-### `app.dock.bounce([type])` _OS X_
+### `app.dock.bounce([type])` _macOS_
 
 * `type` String (opcional) - Pode ser `critical` ou `informational`. O padrão é
  `informational`
@@ -417,31 +414,31 @@ Entretanto, a requisição se mantém ativa até que o aplicativo se torne ativo
 
 Retorna um ID representando a requisição.
 
-### `app.dock.cancelBounce(id)` _OS X_
+### `app.dock.cancelBounce(id)` _macOS_
 
 * `id` Integer
 
 Cancela o salto do `id`.
 
-### `app.dock.setBadge(text)` _OS X_
+### `app.dock.setBadge(text)` _macOS_
 
 * `text` String
 
 Define a string a ser exibida na área de *badging* do *dock*.
 
-### `app.dock.getBadge()` _OS X_
+### `app.dock.getBadge()` _macOS_
 
 Retorna a string da *badge* do *dock*.
 
-### `app.dock.hide()` _OS X_
+### `app.dock.hide()` _macOS_
 
 Esconde o ícone do *dock*.
 
-### `app.dock.show()` _OS X_
+### `app.dock.show()` _macOS_
 
 Exibe o ícone do *dock*.
 
-### `app.dock.setMenu(menu)` _OS X_
+### `app.dock.setMenu(menu)` _macOS_
 
 * `menu` Menu
 

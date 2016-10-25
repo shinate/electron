@@ -2,11 +2,10 @@
 
 Electronは、Pepper Flashプラグインをサポートしています。ElectronでPepper Flashプラグインを使用するために、マニュアルでPepper Flashプラグインのパスを指定し、アプリケーションで有効化しなければなりません。
 
-Electron now supports the Pepper Flash plugin. To use the Pepper Flash plugin in
 
 ## Flash プラグインのコピー準備
 
-OS XとLinuxでは、Pepper Flashプラグインの詳細は、Chromeブラウザーで、`chrome://plugins` にアクセスして確認できます。そこで表示されるパスとバージョンは、ElectronのPepper Flashサポートに役立ちます。それを別のパスにコピーすることができます。
+macOSとLinuxでは、Pepper Flashプラグインの詳細は、Chromeブラウザーで、`chrome://plugins` にアクセスして確認できます。そこで表示されるパスとバージョンは、ElectronのPepper Flashサポートに役立ちます。それを別のパスにコピーすることができます。
 
 ## Electron スイッチの追加
 
@@ -17,30 +16,36 @@ OS XとLinuxでは、Pepper Flashプラグインの詳細は、Chromeブラウ�
 ```javascript
 // Specify flash path.
 // On Windows, it might be /path/to/pepflashplayer.dll
-// On OS X, /path/to/PepperFlashPlayer.plugin
+// On macOS, /path/to/PepperFlashPlayer.plugin
 // On Linux, /path/to/libpepflashplayer.so
-app.commandLine.appendSwitch('ppapi-flash-path', '/path/to/libpepflashplayer.so');
+app.commandLine.appendSwitch('ppapi-flash-path', '/path/to/libpepflashplayer.so')
 
 // Specify flash version, for example, v17.0.0.169
-app.commandLine.appendSwitch('ppapi-flash-version', '17.0.0.169');
+app.commandLine.appendSwitch('ppapi-flash-version', '17.0.0.169')
 
-app.on('ready', function() {
+app.on('ready', function () {
   mainWindow = new BrowserWindow({
     'width': 800,
     'height': 600,
     'web-preferences': {
       'plugins': true
     }
-  });
-  mainWindow.loadURL('file://' + __dirname + '/index.html');
+  })
+  mainWindow.loadURL(`file://${__dirname}/index.html`)
   // Something else
-});
+})
 ```
 
-##  `<webview>` タグでFlashプラグインを有効か
+##  `<webview>` タグでFlashプラグインを有効化
 
 `<webview>` タグに`plugins`属性を追加する
 
 ```html
 <webview src="http://www.adobe.com/software/flash/about/" plugins></webview>
 ```
+
+## トラブルシューティング
+
+Pepper Flashプラグインが読み込まれているかは、devtoolsのconsoleで`navigator.plugins`を見ることで確認することができます。(プラグインのパスが正しいかがわからなくても)
+
+Pepper FlashプラグインのアーキテクチャはElectronのアーキテクチャと一致している必要があります。Windowsで、64bit Electronに32bit Flashプラグインを使用するのはよくある間違いです。

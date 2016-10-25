@@ -1,46 +1,82 @@
-﻿# `<webview>` 태그
+# `<webview>` 태그
 
-`guest` 컨텐츠(웹 페이지)를 Electron 앱 페이지에 삽입하기 위해 `webview` 태그를
-사용할 수 있습니다. 게스트 컨텐츠는 `webview` 컨테이너에 담겨 대상 페이지에 삽입되고
-해당 페이지에선 게스트 컨텐츠의 배치 및 렌더링 과정을 조작할 수 있습니다.
+> 외부 웹 콘텐츠를 고립된 프레임과 프로세스에서 표시합니다.
 
-`iframe`과는 달리 `webview`는 어플리케이션과 분리된 프로세스에서 작동합니다.
-이는 웹 페이지와 같은 권한을 가지지 않고 앱과 임베디드(게스트) 컨텐츠간의 모든
-상호작용이 비동기로 작동한다는 것을 의미합니다. 따라서 임베디드 컨텐츠로부터
-어플리케이션을 안전하게 유지할 수 있습니다.
+`guest` 콘텐츠(웹 페이지)를 Electron 앱 페이지에 삽입하기 위해 `webview` 태그를
+사용할 수 있습니다. 게스트 콘텐츠는 `webview` 컨테이너에 담겨 대상 페이지에 삽입되고
+해당 페이지에선 게스트 콘텐츠의 배치 및 렌더링 과정을 조작할 수 있습니다.
 
-## 예제
+`iframe`과는 달리 `webview`는 애플리케이션과 분리된 프로세스에서 작동합니다.
+이는 웹 페이지와 같은 권한을 가지지 않고 앱과 임베디드(게스트) 콘텐츠간의 모든
+상호작용이 비동기로 작동한다는 것을 의미합니다. 따라서 임베디드 콘텐츠로부터
+애플리케이션을 안전하게 유지할 수 있습니다.
 
-웹 페이지를 어플리케이션에 삽입하려면 `webview` 태그를 사용해 원하는 타겟 페이지에
-추가하면 됩니다. (게스트 컨텐츠가 앱 페이지에 추가 됩니다) 간단한 예로 `webview`
+보안상의 이유로, `webview`는 `nodeIntegration`이 활성화된 `BrowserWindow`에서만 사용할 수 있습니다.
+
+## 예시
+
+웹 페이지를 애플리케이션에 삽입하려면 `webview` 태그를 사용해 원하는 타겟 페이지에
+추가하면 됩니다. (게스트 콘텐츠가 앱 페이지에 추가 됩니다) 간단한 예로 `webview`
 태그의 `src` 속성에 페이지를 지정하고 css 스타일을 이용해서 컨테이너의 외관을 설정할
 수 있습니다:
 
 ```html
-<webview id="foo" src="https://www.github.com/" style="display:inline-block; width:640px; height:480px"></webview>
+<webview id="foo" src="https://www.github.com/" style="display:inline-flex; width:640px; height:480px"></webview>
 ```
 
-게스트 컨텐츠를 조작하기 위해 자바스크립트로 `webview` 태그의 이벤트를 리스닝 하여
-응답을 받을 수 있습니다. 다음 예제를 참고하세요: 첫번째 리스너는 페이지 로딩 시작시의
+게스트 콘텐츠를 조작하기 위해 자바스크립트로 `webview` 태그의 이벤트를 리스닝 하여
+응답을 받을 수 있습니다. 다음 예시를 참고하세요: 첫번째 리스너는 페이지 로딩 시작시의
 이벤트를 확인하고 두번째 리스너는 페이지의 로딩이 끝난시점을 확인합니다. 그리고
 페이지를 로드하는 동안 "loading..." 메시지를 표시합니다.
 
 ```html
 <script>
-  onload = function() {
-    var webview = document.getElementById("foo");
-    var indicator = document.querySelector(".indicator");
+  onload = () => {
+    const webview = document.getElementById('foo')
+    const indicator = document.querySelector('.indicator')
 
-    var loadstart = function() {
-      indicator.innerText = "loading...";
+    const loadstart = () => {
+      indicator.innerText = 'loading...'
     }
-    var loadstop = function() {
-      indicator.innerText = "";
+
+    const loadstop = () => {
+      indicator.innerText = ''
     }
-    webview.addEventListener("did-start-loading", loadstart);
-    webview.addEventListener("did-stop-loading", loadstop);
+
+    webview.addEventListener('did-start-loading', loadstart)
+    webview.addEventListener('did-stop-loading', loadstop)
   }
 </script>
+```
+
+## CSS 스타일링 참고
+
+주의할 점은 `webview` 태그의 스타일은 전통적인 flexbox 레이아웃을 사용했을 때 자식
+`object` 요소가 해당 `webview` 컨테이너의 전체 높이와 넓이를 확실히 채우도록
+내부적으로 `display:flex;`를 사용합니다. (v0.36.11 부터) 따라서 인라인 레이아웃을
+위해 `display:inline-flex;`를 쓰지 않는 한, 기본 `display:flex;` CSS 속성을
+덮어쓰지 않도록 주의해야 합니다.
+
+`webview`는 `hidden` 또는 `display: none;` 속성을 사용할 때 발생하는 문제를 한 가지
+가지고 있습니다. 자식 `browserplugin` 객체 내에서 비정상적인 랜더링 동작을 발생시킬 수
+있으며 웹 페이지가 로드되었을 때, `webview`가 숨겨지지 않았을 때, 반대로 그냥 바로
+다시 보이게 됩니다. `webview`를 숨기는 방법으로 가장 권장되는 방법은 `width` &
+`height`를 0으로 지정하는 CSS를 사용하는 것이며 `flex`를 통해 0px로 요소를 수축할 수
+있도록 합니다.
+
+```html
+<style>
+  webview {
+    display:inline-flex;
+    width:640px;
+    height:480px;
+  }
+  webview.hide {
+    flex: 0 1;
+    width: 0px;
+    height: 0px;
+  }
+</style>
 ```
 
 ## 태그 속성
@@ -140,7 +176,7 @@ API를 사용할 수 있습니다. 이를 지정하면 내부에서 로우레벨
 동일한 세션을 공유할 수 있도록 할 수 있습니다. 만약 `partition`이 지정되지 않으면 앱의
 기본 세션을 사용합니다.
 
-이 값은 첫 탐색 이전에만 지정할 수 있습니다. 즉. 작동중인 랜더러 프로세스의 세션은
+이 값은 첫 탐색 이전에만 지정할 수 있습니다. 즉. 작동중인 렌더러 프로세스의 세션은
 변경할 수 없습니다. 이후 이 값을 바꾸려고 시도하면 DOM 예외를 발생시킵니다.
 
 ### `allowpopups`
@@ -157,9 +193,33 @@ API를 사용할 수 있습니다. 이를 지정하면 내부에서 로우레벨
 <webview src="https://www.github.com/" blinkfeatures="PreciseMemoryInfo, CSSVariables"></webview>
 ```
 
-활성화할 blink 기능을 지정한 `,`로 구분된 문자열의 리스트입니다. 지원하는 기능 문자열의
-전체 목록은 [setFeatureEnabledFromString][blink-feature-string] 함수에서 찾을 수
-있습니다.
+활성화할 blink 기능을 지정한 `,`로 구분된 문자열의 리스트입니다. 지원하는 기능
+문자열의 전체 목록은 [RuntimeEnabledFeatures.in][blink-feature-string] 파일에서
+찾을 수 있습니다.
+
+### `disableblinkfeatures`
+
+```html
+<webview src="https://www.github.com/" disableblinkfeatures="PreciseMemoryInfo, CSSVariables"></webview>
+```
+
+비활성화할 blink 기능을 지정한 `,`로 구분된 문자열의 리스트입니다. 지원하는 기능
+문자열의 전체 목록은 [RuntimeEnabledFeatures.in][blink-feature-string] 파일에서
+찾을 수 있습니다.
+
+### `guestinstance`
+
+```html
+<webview src="https://www.github.com/" guestinstance="3"></webview>
+```
+
+webview 를 특정 webContents 와 연결해주는 값 입니다. webview 가 처음 로드될 때
+새 webContents 가 생성되고 이 속성이 그 인스턴스의 식별자로 설정됩니다. 새로운
+또는 기존 webview 에 이 속성을 설정하면 다른 webview 에서 현재 렌더링하는 기존
+webContents 와 연결합니다.
+
+기존 webview 는 `destroy` 이벤트가 발생하고 새 URL 이 로드될 때 새 webContens
+가 생성될 것 입니다.
 
 ## Methods
 
@@ -167,12 +227,13 @@ API를 사용할 수 있습니다. 이를 지정하면 내부에서 로우레벨
 
 **참고:** <webview> 태그 객체의 메서드는 페이지 로드가 끝난 뒤에만 사용할 수 있습니다.
 
-**예제**
+**예시**
 
 ```javascript
-webview.addEventListener("dom-ready", function() {
-  webview.openDevTools();
-});
+const webview = document.getElementById('foo')
+webview.addEventListener('dom-ready', () => {
+  webview.openDevTools()
+})
 ```
 
 ### `<webview>.loadURL(url[, options])`
@@ -254,7 +315,7 @@ Webview에 웹 페이지 `url`을 로드합니다. `url`은 `http://`, `file://`
 
 ### `<webview>.isCrashed()`
 
-랜더러 프로세스가 크래시 됬는지 확인합니다.
+렌더러 프로세스가 크래시 됬는지 확인합니다.
 
 ### `<webview>.setUserAgent(userAgent)`
 
@@ -277,7 +338,7 @@ Webview에 웹 페이지 `url`을 로드합니다. `url`은 `http://`, `file://`
 * `code` String
 * `userGesture` Boolean
 * `callback` Function (optional) - 스크립트의 실행이 완료되면 호출됩니다.
-  * `result`
+  * `result` Any
 
 페이지에서 자바스크립트 코드를 실행합니다.
 
@@ -285,7 +346,7 @@ Webview에 웹 페이지 `url`을 로드합니다. `url`은 `http://`, `file://`
 이 옵션을 활성화 시키면 `requestFullScreen`와 같은 HTML API에서 유저의 승인을
 무시하고 개발자가 API를 바로 사용할 수 있도록 허용합니다.
 
-역주: 기본적으로 브라우저에선 전체화면, 웹캠, 파일 열기등의 API를 사용하려면 유저의
+**역자주:** 기본적으로 브라우저에선 전체화면, 웹캠, 파일 열기등의 API를 사용하려면 유저의
 승인(이벤트)이 필요합니다.
 
 ### `<webview>.openDevTools()`
@@ -314,6 +375,16 @@ Webview에 웹 페이지 `url`을 로드합니다. `url`은 `http://`, `file://`
 ### `<webview>.inspectServiceWorker()`
 
 Service worker에 대한 개발자 도구를 엽니다.
+
+### `<webview>.setAudioMuted(muted)`
+
+* `muted` Boolean
+
+게스트 페이지 음소거 설정.
+
+### `<webview>.isAudioMuted()`
+
+Returns `Boolean` - 게스트 페이지 음소거 여부.
 
 ### `<webview>.undo()`
 
@@ -371,7 +442,7 @@ Service worker에 대한 개발자 도구를 엽니다.
 
 ### `webContents.findInPage(text[, options])`
 
-* `text` String - 찾을 컨텐츠, 반드시 공백이 아니여야 합니다.
+* `text` String - 찾을 콘텐츠, 반드시 공백이 아니여야 합니다.
 * `options` Object (optional)
   * `forward` Boolean - 앞에서부터 검색할지 뒤에서부터 검색할지 여부입니다. 기본값은
     `true`입니다.
@@ -394,19 +465,24 @@ Service worker에 대한 개발자 도구를 엽니다.
 
 * `action` String - [`<webview>.findInPage`](web-view-tag.md#webviewtagfindinpage)
   요청이 종료되었을 때 일어날 수 있는 작업을 지정합니다.
-  * `clearSelection` - 선택을 일반 선택으로 변경합니다.
-  * `keepSelection` - 선택을 취소합니다.
+  * `clearSelection` - 선택을 취소합니다.
+  * `keepSelection` - 선택을 일반 선택으로 변경합니다.
   * `activateSelection` - 포커스한 후 선택된 노드를 클릭합니다.
 
 제공된 `action`에 대한 `webContents`의 모든 `findInPage` 요청을 중지합니다.
 
 ### `<webview>.print([options])`
 
-Webview 페이지를 인쇄합니다. `webContents.print([options])` 메서드와 같습니다.
+`webview` 페이지를 인쇄합니다. `webContents.print([options])` 메서드와 같습니다.
 
 ### `<webview>.printToPDF(options, callback)`
 
-Webview 페이지를 PDF 형식으로 인쇄합니다.
+`webview` 페이지를 PDF 형식으로 인쇄합니다.
+`webContents.printToPDF(options, callback)` 메서드와 같습니다.
+
+### `<webview>.capturePage([rect, ]callback)`
+
+`webview`의 페이지의 스냅샷을 캡쳐합니다.
 `webContents.printToPDF(options, callback)` 메서드와 같습니다.
 
 ### `<webview>.send(channel[, arg1][, arg2][, ...])`
@@ -414,20 +490,37 @@ Webview 페이지를 PDF 형식으로 인쇄합니다.
 * `channel` String
 * `args` (optional)
 
-`channel`을 통해 랜더러 프로세스로 비동기 메시지를 보냅니다. 또한 `args`를 지정하여
-임의의 인자를 보낼 수도 있습니다. 랜더러 프로세스는 `ipcRenderer` 모듈의 `channel`
+`channel`을 통해 렌더러 프로세스로 비동기 메시지를 보냅니다. 또한 `args`를 지정하여
+임의의 인수를 보낼 수도 있습니다. 렌더러 프로세스는 `ipcRenderer` 모듈의 `channel`
 이벤트로 이 메시지를 받아 처리할 수 있습니다.
 
-예제는 [webContents.send](web-contents.md#webcontentssendchannel-args)를 참고하세요.
+예시는 [webContents.send](web-contents.md#webcontentssendchannel-args)를 참고하세요.
 
 ### `<webview>.sendInputEvent(event)`
 
 * `event` Object
 
-페이지에 input `event`를 보냅니다.
+페이지에 입력 `event`를 보냅니다.
 
-`event` 객체에 대해 자세히 알아보려면 [webContents.sendInputEvent](web-contents.md##webcontentssendinputeventevent)를
+`event` 객체에 대해 자세히 알아보려면 [webContents.sendInputEvent](web-contents.md#webcontentssendinputeventevent)를
 참고하세요.
+
+### `<webview>.setZoomFactor(factor)`
+
+* `factor` Number - 줌 수치.
+
+지정한 수치로 줌 수치를 변경합니다. 줌 수치는 100으로 나눈 값이며 300%는 3.0이 됩니다.
+
+### `<webview>.setZoomLevel(level)`
+
+* `level` Number - 줌 레벨.
+
+지정한 수준으로 줌 수준을 변경합니다. 원본 크기는 0이고 각 값의 증가와 감소는 현재 줌을
+20% 크거나 작게 표현하고 각 크기는 원본 크기의 300%와 50%로 제한됩니다.
+
+### `<webview>.showDefinitionForSelection()` _macOS_
+
+페이지에서 선택된 단어에 대한 사전 검색 결과 팝업을 표시합니다.
 
 ### `<webview>.getWebContents()`
 
@@ -460,9 +553,10 @@ Returns:
 * `errorCode` Integer
 * `errorDescription` String
 * `validatedURL` String
+* `isMainFrame` Boolean
 
-`did-finish-load`와 비슷합니다. 하지만 이 이벤트는 `window.stop()`과 같은 무언가로
-인해 로드에 실패했을 때 발생하는 이벤트입니다.
+`did-finish-load`와 비슷합니다. 하지만 이 이벤트는 `window.stop()`과 같이 취소
+함수가 호출되었거나 로드에 실패했을 때 발생하는 이벤트입니다.
 
 ### Event: 'did-frame-finish-load'
 
@@ -492,6 +586,7 @@ Returns:
 * `requestMethod` String
 * `referrer` String
 * `headers` Object
+* `resourceType` String
 
 요청한 리소스에 관해 자세한 내용을 알 수 있을 때 발생하는 이벤트입니다.
 `status`는 리소스를 다운로드할 소켓 커낵션을 나타냅니다.
@@ -524,7 +619,7 @@ URL에서 합성(synthesised)된 제목인 경우 false로 표시됩니다.
 
 Returns:
 
-* `favicons` Array - URL 배열
+* `favicons` String[] - URL 배열
 
 페이지가 favicon URL을 받았을 때 발생하는 이벤트입니다.
 
@@ -547,13 +642,14 @@ Returns:
 
 `console.log` API에 의해 로깅될 때 발생하는 이벤트입니다.
 
-다음 예제는 모든 로그 메시지를 로그 레벨이나 다른 속성에 관련 없이 호스트 페이지의
-콘솔에 다시 로깅하는 예제입니다.
+다음 예시는 모든 로그 메시지를 로그 레벨이나 다른 속성에 관련 없이 호스트 페이지의
+콘솔에 다시 로깅하는 예시입니다.
 
 ```javascript
-webview.addEventListener('console-message', function(e) {
-  console.log('Guest page logged a message:', e.message);
-});
+const webview = document.getElementById('foo')
+webview.addEventListener('console-message', (e) => {
+  console.log('Guest page logged a message:', e.message)
+})
 ```
 
 ### Event: 'found-in-page'
@@ -563,6 +659,7 @@ Returns:
 * `result` Object
   * `requestId` Integer
   * `finalUpdate` Boolean - 더 많은 응답이 따르는 경우를 표시합니다.
+  * `activeMatchOrdinal` Integer (optional) - 활성화 일치의 위치.
   * `matches` Integer (optional) - 일치하는 개수.
   * `selectionArea` Object (optional) - 첫 일치 부위의 좌표.
 
@@ -570,12 +667,13 @@ Returns:
 사용할 수 있을 때 발생하는 이벤트입니다.
 
 ```javascript
-webview.addEventListener('found-in-page', function(e) {
-  if (e.result.finalUpdate)
-    webview.stopFindInPage("keepSelection");
-});
+const webview = document.getElementById('foo')
+webview.addEventListener('found-in-page', (e) => {
+  webview.stopFindInPage('keepSelection')
+})
 
-const rquestId = webview.findInPage("test");
+const requestId = webview.findInPage('test')
+console.log(requestId)
 ```
 
 ### Event: 'new-window'
@@ -585,17 +683,23 @@ Returns:
 * `url` String
 * `frameName` String
 * `disposition` String - `default`, `foreground-tab`, `background-tab`,
-  `new-window`, `other`를 사용할 수 있습니다.
+  `new-window`, `save-to-disk`, `other`를 사용할 수 있습니다.
 * `options` Object - 새로운 `BrowserWindow`를 만들 때 사용되어야 하는 옵션.
 
 페이지가 새로운 브라우저 창을 생성할 때 발생하는 이벤트입니다.
 
-다음 예제 코드는 새 URL을 시스템의 기본 브라우저로 여는 코드입니다.
+다음 예시 코드는 새 URL을 시스템의 기본 브라우저로 여는 코드입니다.
 
 ```javascript
-webview.addEventListener('new-window', function(e) {
-  require('electron').shell.openExternal(e.url);
-});
+const {shell} = require('electron')
+const webview = document.getElementById('foo')
+
+webview.addEventListener('new-window', (e) => {
+  const protocol = require('url').parse(e.url).protocol
+  if (protocol === 'http:' || protocol === 'https:') {
+    shell.openExternal(e.url)
+  }
+})
 ```
 
 ### Event: 'will-navigate'
@@ -631,6 +735,7 @@ Returns:
 Returns:
 
 * `url` String
+* `isMainFrame` Boolean
 
 페이지 내의 탐색이 완료되면 발생하는 이벤트입니다.
 
@@ -642,13 +747,14 @@ Returns:
 
 페이지가 자체적으로 닫힐 때 발생하는 이벤트입니다.
 
-다음 예제 코드는 페이지가 자체적으로 닫힐 때 `webview`를 `about:blank` 페이지로
-이동시키는 예제입니다.
+다음 예시 코드는 페이지가 자체적으로 닫힐 때 `webview`를 `about:blank` 페이지로
+이동시키는 예시입니다.
 
 ```javascript
-webview.addEventListener('close', function() {
-  webview.src = 'about:blank';
-});
+const webview = document.getElementById('foo')
+webview.addEventListener('close', () => {
+  webview.src = 'about:blank'
+})
 ```
 
 ### Event: 'ipc-message'
@@ -665,24 +771,25 @@ Returns:
 
 ```javascript
 // In embedder page.
-webview.addEventListener('ipc-message', function(event) {
-  console.log(event.channel);
+const webview = document.getElementById('foo')
+webview.addEventListener('ipc-message', (event) => {
+  console.log(event.channel)
   // Prints "pong"
-});
-webview.send('ping');
+})
+webview.send('ping')
 ```
 
 ```javascript
 // In guest page.
-var ipcRenderer = require('electron').ipcRenderer;
-ipcRenderer.on('ping', function() {
-  ipcRenderer.sendToHost('pong');
-});
+const {ipcRenderer} = require('electron')
+ipcRenderer.on('ping', () => {
+  ipcRenderer.sendToHost('pong')
+})
 ```
 
 ### Event: 'crashed'
 
-랜더러 프로세스가 크래시 되었을 때 발생하는 이벤트입니다.
+렌더러 프로세스가 크래시 되었을 때 발생하는 이벤트입니다.
 
 ### Event: 'gpu-crashed'
 
@@ -699,7 +806,7 @@ Returns:
 
 ### Event: 'destroyed'
 
-WebContents가 파괴될 때 발생하는 이벤트입니다.
+WebContents가 소멸될 때 발생하는 이벤트입니다.
 
 ### Event: 'media-started-playing'
 
@@ -711,12 +818,25 @@ WebContents가 파괴될 때 발생하는 이벤트입니다.
 
 ### Event: 'did-change-theme-color'
 
+Returns:
+
+* `themeColor` String
+
 페이지의 테마 색이 변경될 때 발생하는 이벤트입니다. 이 이벤트는 보통 meta 태그에
 의해서 발생합니다:
 
 ```html
 <meta name='theme-color' content='#ff0000'>
 ```
+
+### Event: 'update-target-url'
+
+Returns:
+
+* `url` String
+
+마우스나 키보드를 사용해 링크에 포커스할 때 발생하는 이벤트입니다.
+
 ### Event: 'devtools-opened'
 
 개발자 도구가 열렸을 때 발생하는 이벤트입니다.
@@ -729,4 +849,4 @@ WebContents가 파괴될 때 발생하는 이벤트입니다.
 
 개발자 도구가 포커스되거나 열렸을 때 발생하는 이벤트입니다.
 
-[blink-feature-string]: https://code.google.com/p/chromium/codesearch#chromium/src/out/Debug/gen/blink/platform/RuntimeEnabledFeatures.cpp&sq=package:chromium&type=cs&l=527
+[blink-feature-string]: https://cs.chromium.org/chromium/src/third_party/WebKit/Source/platform/RuntimeEnabledFeatures.in

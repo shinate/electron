@@ -1,13 +1,13 @@
 # Extensión DevTools
 
-Para facilitar la depuración, Electron provee un soporte básico para la extensión 
-[Chrome DevTools Extension][devtools-extension].
+Para facilitar la depuración, Electron provee un soporte básico para la extensión
+[Chrome DevTools][devtools-extension].
 
 Para la mayoría de las extensiones devtools, simplemente puedes descargar el código fuente
 y utilizar `BrowserWindow.addDevToolsExtension` para cargarlas, las extensiones cargadas
 serán recordadas para que no sea necesario llamar a la función cada vez que creas una ventana.
 
-Por ejemplo, para usar la extensión [React DevTools Extension](https://github.com/facebook/react-devtools), primero debes descargar el código fuente:
+Por ejemplo, para usar la extensión [React DevTools](https://github.com/facebook/react-devtools), primero debes descargar el código fuente:
 
 ```bash
 $ cd /some-directory
@@ -18,14 +18,14 @@ Luego cargas la aplicación en Electron, abriendo devtools en cualquier ventana,
 y ejecutando este código en la consola devtools:
 
 ```javascript
-require('remote').require('browser-window').addDevToolsExtension('/some-directory/react-devtools');
+require('remote').require('browser-window').addDevToolsExtension('/some-directory/react-devtools')
 ```
 
 Para remover una extensión, puedes utilizar `BrowserWindow.removeDevToolsExtension`
 especificando el nombre, y esta ya no se cargará la siguiente vez que abras devtools:
 
 ```javascript
-require('remote').require('browser-window').removeDevToolsExtension('React Developer Tools');
+require('remote').require('browser-window').removeDevToolsExtension('React Developer Tools')
 ```
 
 ## Formato de las extensiones devtools

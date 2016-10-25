@@ -6,33 +6,50 @@
 
 #import "atom/browser/mac/atom_application.h"
 #include "atom/browser/browser.h"
+#include "atom/browser/mac/dict_util.h"
 #include "base/strings/sys_string_conversions.h"
+#include "base/values.h"
+
+@interface NSWindow (SierraSDK)
+@property(class) BOOL allowsAutomaticWindowTabbing;
+@end
 
 @implementation AtomApplicationDelegate
 
-- (id)init {
-  self = [super init];
-  menu_controller_.reset([[AtomMenuController alloc] init]);
-  return self;
-}
-
-- (void)setApplicationDockMenu:(ui::MenuModel*)model {
-  [menu_controller_ populateWithModel:model];
+- (void)setApplicationDockMenu:(atom::AtomMenuModel*)model {
+  menu_controller_.reset([[AtomMenuController alloc] initWithModel:model
+                                             useDefaultAccelerator:NO]);
 }
 
 - (void)applicationWillFinishLaunching:(NSNotification*)notify {
   // Don't add the "Enter Full Screen" menu item automatically.
   [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"NSFullScreenMenuItemEverywhere"];
 
+  // Don't add the "Show Tab Bar" menu item.
+  if ([NSWindow respondsToSelector:@selector(allowsAutomaticWindowTabbing)])
+    NSWindow.allowsAutomaticWindowTabbing = NO;
+
   atom::Browser::Get()->WillFinishLaunching();
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification*)notify {
-  atom::Browser::Get()->DidFinishLaunching();
+  NSUserNotification *user_notification = [notify userInfo][(id)@"NSApplicationLaunchUserNotificationKey"];
+
+  if (user_notification.userInfo != nil) {
+    std::unique_ptr<base::DictionaryValue> launch_info =
+      atom::NSDictionaryToDictionaryValue(user_notification.userInfo);
+    atom::Browser::Get()->DidFinishLaunching(*launch_info);
+  } else {
+    std::unique_ptr<base::DictionaryValue> empty_info(new base::DictionaryValue);
+    atom::Browser::Get()->DidFinishLaunching(*empty_info);
+  }
 }
 
 - (NSMenu*)applicationDockMenu:(NSApplication*)sender {
-  return [menu_controller_ menu];
+  if (menu_controller_)
+    return [menu_controller_ menu];
+  else
+    return nil;
 }
 
 - (BOOL)application:(NSApplication*)sender
@@ -57,6 +74,19 @@
   atom::Browser* browser = atom::Browser::Get();
   browser->Activate(static_cast<bool>(flag));
   return flag;
+}
+
+-  (BOOL)application:(NSApplication*)sender
+continueUserActivity:(NSUserActivity*)userActivity
+  restorationHandler:(void (^)(NSArray*restorableObjects))restorationHandler {
+  std::string activity_type(base::SysNSStringToUTF8(userActivity.activityType));
+  std::unique_ptr<base::DictionaryValue> user_info =
+    atom::NSDictionaryToDictionaryValue(userActivity.userInfo);
+  if (!user_info)
+    return NO;
+
+  atom::Browser* browser = atom::Browser::Get();
+  return browser->ContinueUserActivity(activity_type, *user_info) ? YES : NO;
 }
 
 @end

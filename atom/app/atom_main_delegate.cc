@@ -4,13 +4,16 @@
 
 #include "atom/app/atom_main_delegate.h"
 
-#include <string>
 #include <iostream>
+#include <string>
 
 #include "atom/app/atom_content_client.h"
 #include "atom/browser/atom_browser_client.h"
+#include "atom/browser/relauncher.h"
 #include "atom/common/google_api_key.h"
+#include "atom/common/options_switches.h"
 #include "atom/renderer/atom_renderer_client.h"
+#include "atom/renderer/atom_sandboxed_renderer_client.h"
 #include "atom/utility/atom_content_utility_client.h"
 #include "base/command_line.h"
 #include "base/debug/stack_trace.h"
@@ -25,10 +28,19 @@ namespace atom {
 
 namespace {
 
+const char* kRelauncherProcess = "relauncher";
+
 bool IsBrowserProcess(base::CommandLine* cmd) {
-  std::string process_type = cmd->GetSwitchValueASCII(switches::kProcessType);
+  std::string process_type = cmd->GetSwitchValueASCII(::switches::kProcessType);
   return process_type.empty();
 }
+
+#if defined(OS_WIN)
+void InvalidParameterHandler(const wchar_t*, const wchar_t*, const wchar_t*,
+                             unsigned int, uintptr_t) {
+  // noop.
+}
+#endif
 
 }  // namespace
 
@@ -61,8 +73,8 @@ bool AtomMainDelegate::BasicStartupComplete(int* exit_code) {
 #endif  // !defined(OS_WIN)
 
   // Only enable logging when --enable-logging is specified.
-  scoped_ptr<base::Environment> env(base::Environment::Create());
-  if (!command_line->HasSwitch(switches::kEnableLogging) &&
+  std::unique_ptr<base::Environment> env(base::Environment::Create());
+  if (!command_line->HasSwitch(::switches::kEnableLogging) &&
       !env->HasVar("ELECTRON_ENABLE_LOGGING")) {
     settings.logging_dest = logging::LOG_NONE;
     logging::SetMinLogLevel(logging::LOG_NUM_SEVERITIES);
@@ -83,6 +95,15 @@ bool AtomMainDelegate::BasicStartupComplete(int* exit_code) {
 
   chrome::RegisterPathProvider();
 
+#if defined(OS_MACOSX)
+  SetUpBundleOverrides();
+#endif
+
+#if defined(OS_WIN)
+  // Ignore invalid parameter errors.
+  _set_invalid_parameter_handler(InvalidParameterHandler);
+#endif
+
   return brightray::MainDelegate::BasicStartupComplete(exit_code);
 }
 
@@ -90,27 +111,29 @@ void AtomMainDelegate::PreSandboxStartup() {
   brightray::MainDelegate::PreSandboxStartup();
 
   // Set google API key.
-  scoped_ptr<base::Environment> env(base::Environment::Create());
+  std::unique_ptr<base::Environment> env(base::Environment::Create());
   if (!env->HasVar("GOOGLE_API_KEY"))
     env->SetVar("GOOGLE_API_KEY", GOOGLEAPIS_API_KEY);
 
   auto command_line = base::CommandLine::ForCurrentProcess();
   std::string process_type = command_line->GetSwitchValueASCII(
-      switches::kProcessType);
-
-  if (process_type == switches::kUtilityProcess) {
-    AtomContentUtilityClient::PreSandboxStartup();
-  }
+      ::switches::kProcessType);
 
   // Only append arguments for browser process.
   if (!IsBrowserProcess(command_line))
     return;
 
-  // Disable renderer sandbox for most of node's functions.
-  command_line->AppendSwitch(switches::kNoSandbox);
+  if (command_line->HasSwitch(switches::kEnableSandbox)) {
+    // Disable setuid sandbox since it is not longer required on linux(namespace
+    // sandbox is available on most distros).
+    command_line->AppendSwitch(::switches::kDisableSetuidSandbox);
+  } else {
+    // Disable renderer sandbox for most of node's functions.
+    command_line->AppendSwitch(::switches::kNoSandbox);
+  }
 
   // Allow file:// URIs to read other file:// URIs by default.
-  command_line->AppendSwitch(switches::kAllowFileAccessFromFiles);
+  command_line->AppendSwitch(::switches::kAllowFileAccessFromFiles);
 
 #if defined(OS_MACOSX)
   // Enable AVFoundation.
@@ -125,7 +148,13 @@ content::ContentBrowserClient* AtomMainDelegate::CreateContentBrowserClient() {
 
 content::ContentRendererClient*
     AtomMainDelegate::CreateContentRendererClient() {
-  renderer_client_.reset(new AtomRendererClient);
+  if (base::CommandLine::ForCurrentProcess()->HasSwitch(
+        switches::kEnableSandbox)) {
+    renderer_client_.reset(new AtomSandboxedRendererClient);
+  } else {
+    renderer_client_.reset(new AtomRendererClient);
+  }
+
   return renderer_client_.get();
 }
 
@@ -134,8 +163,29 @@ content::ContentUtilityClient* AtomMainDelegate::CreateContentUtilityClient() {
   return utility_client_.get();
 }
 
-scoped_ptr<brightray::ContentClient> AtomMainDelegate::CreateContentClient() {
-  return scoped_ptr<brightray::ContentClient>(new AtomContentClient).Pass();
+int AtomMainDelegate::RunProcess(
+    const std::string& process_type,
+    const content::MainFunctionParams& main_function_params) {
+  if (process_type == kRelauncherProcess)
+    return relauncher::RelauncherMain(main_function_params);
+  else
+    return -1;
+}
+
+#if defined(OS_MACOSX)
+bool AtomMainDelegate::ShouldSendMachPort(const std::string& process_type) {
+  return process_type != kRelauncherProcess;
+}
+
+bool AtomMainDelegate::DelaySandboxInitialization(
+    const std::string& process_type) {
+  return process_type == kRelauncherProcess;
+}
+#endif
+
+std::unique_ptr<brightray::ContentClient>
+AtomMainDelegate::CreateContentClient() {
+  return std::unique_ptr<brightray::ContentClient>(new AtomContentClient);
 }
 
 }  // namespace atom

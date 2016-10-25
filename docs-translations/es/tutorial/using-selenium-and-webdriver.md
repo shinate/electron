@@ -8,7 +8,7 @@ De [ChromeDriver - WebDriver for Chrome][chrome-driver]:
 > el protocolo de WebDriver para Chromium. Se encuentra en desarrollo por los miembros de 
 > Chromium y WebDriver.
 
-En la página de [lanzamientos](https://github.com/atom/electron/releases) de Electron encontrarás paquetes de `chromedriver`.
+En la página de [lanzamientos](https://github.com/electron/electron/releases) de Electron encontrarás paquetes de `chromedriver`.
 
 ## Ajustando parámetros con WebDriverJs
 
@@ -40,7 +40,7 @@ excepto que necesitas especificar manualmente cómo se conectará el chrome driv
 y dónde encontrará el binario de Electron:
 
 ```javascript
-var webdriver = require('selenium-webdriver');
+var webdriver = require('selenium-webdriver')
 
 var driver = new webdriver.Builder()
   // El puerto "9515" es que abre chrome driver.
@@ -49,23 +49,23 @@ var driver = new webdriver.Builder()
     // Aquí especificamos la ruta a Electron
     binary: '/Path-to-Your-App.app/Contents/MacOS/Atom'}})
   .forBrowser('electron')
-  .build();
+  .build()
 
-driver.get('http://www.google.com');
-driver.findElement(webdriver.By.name('q')).sendKeys('webdriver');
-driver.findElement(webdriver.By.name('btnG')).click();
-driver.wait(function() {
- return driver.getTitle().then(function(title) {
-   return title === 'webdriver - Google Search';
- });
-}, 1000);
+driver.get('http://www.google.com')
+driver.findElement(webdriver.By.name('q')).sendKeys('webdriver')
+driver.findElement(webdriver.By.name('btnG')).click()
+driver.wait(function () {
+  return driver.getTitle().then(function (title) {
+    return title === 'webdriver - Google Search'
+  })
+}, 1000)
 
-driver.quit();
+driver.quit()
 ```
 
 ## Workflow
 
-Para probar tu aplicación sin recompilar Electron, simplemente [copia](https://github.com/atom/electron/blob/master/docs/tutorial/application-distribution.md) las fuentes de tu aplicación en el directorio de recursos de Electron.
+Para probar tu aplicación sin recompilar Electron, simplemente [copia](https://github.com/electron/electron/blob/master/docs/tutorial/application-distribution.md) las fuentes de tu aplicación en el directorio de recursos de Electron.
 
 [chrome-driver]: https://sites.google.com/a/chromium.org/chromedriver/
 

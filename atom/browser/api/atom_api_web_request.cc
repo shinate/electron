@@ -36,8 +36,10 @@ namespace atom {
 
 namespace api {
 
-WebRequest::WebRequest(AtomBrowserContext* browser_context)
+WebRequest::WebRequest(v8::Isolate* isolate,
+                       AtomBrowserContext* browser_context)
     : browser_context_(browser_context) {
+  Init(isolate);
 }
 
 WebRequest::~WebRequest() {
@@ -81,13 +83,14 @@ void WebRequest::SetListener(Method method, Event type, mate::Arguments* args) {
 mate::Handle<WebRequest> WebRequest::Create(
     v8::Isolate* isolate,
     AtomBrowserContext* browser_context) {
-  return mate::CreateHandle(isolate, new WebRequest(browser_context));
+  return mate::CreateHandle(isolate, new WebRequest(isolate, browser_context));
 }
 
 // static
 void WebRequest::BuildPrototype(v8::Isolate* isolate,
-                                v8::Local<v8::ObjectTemplate> prototype) {
-  mate::ObjectTemplateBuilder(isolate, prototype)
+                                v8::Local<v8::FunctionTemplate> prototype) {
+  prototype->SetClassName(mate::StringToV8(isolate, "WebRequest"));
+  mate::ObjectTemplateBuilder(isolate, prototype->PrototypeTemplate())
       .SetMethod("onBeforeRequest",
                  &WebRequest::SetResponseListener<
                     AtomNetworkDelegate::kOnBeforeRequest>)

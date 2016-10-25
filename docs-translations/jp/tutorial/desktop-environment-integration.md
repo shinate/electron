@@ -4,16 +4,19 @@
 
 このガイドでは、Electron APIでデスクトップ環境にアプリケーションを統合する方法を説明します。
 
-## 通知 (Windows, Linux, OS X)
+## 通知 (Windows, Linux, macOS)
 
 3つのオペレーティングシステム全てで、アプリケーションからユーザーに通知を送る手段が提供されています。通知を表示するためにオペレーティングシステムのネイティブ通知APIを使用しする[HTML5 Notification API](https://notifications.spec.whatwg.org/)で、Electronは、開発者に通知を送ることができます。
 
-```javascript
-var myNotification = new Notification('Title', {
-  body: 'Lorem Ipsum Dolor Sit Amet'
-});
+**注意:** これはHTML5 APIですので、レンダラプロセス内のみで有効です。
 
-myNotification.onclick = function () {
+
+```javascript
+let myNotification = new Notification('Title', {
+  body: 'Lorem Ipsum Dolor Sit Amet'
+})
+
+myNotification.onclick = () => {
   console.log('Notification clicked')
 }
 ```
@@ -33,15 +36,15 @@ Model ID][app-user-model-id]で、アプリへのショートカットはスタ�
 
 通知は、`libnotify`を使用して送信されます。[デスクトップ通知仕様][notification-spec]に対応したデスクトップ環境上（Cinnamon、Enlightenment、Unity、GNOME、KDEなど）で通知を表示できます。
 
-### OS X
+### macOS
 
-通知は、そのままOS Xに通知されます。しかし、[通知に関するAppleのヒューマンインターフェイスガイドライン（英語版）](https://developer.apple.com/library/mac/documentation/UserExperience/Conceptual/OSXHIGuidelines/NotificationCenter.html)を知っておくべきです。
+通知は、そのままmacOSに通知されます。しかし、[通知に関するAppleのヒューマンインターフェイスガイドライン（英語版）](https://developer.apple.com/library/mac/documentation/UserExperience/Conceptual/OSXHIGuidelines/NotificationCenter.html)を知っておくべきです。
 
 通知は、256バイトサイズに制限されており、制限を超えていた場合、通知が破棄されます。
 
-## 最近のドキュメント (Windows と OS X)
+## 最近のドキュメント (Windows と macOS)
 
-Windows と OS Xは、ジャンプリストやドックメニュー経由で、アプリケーションが開いた最近のドキュメント一覧に簡単にアクセスできます。
+Windows と macOSは、ジャンプリストやドックメニュー経由で、アプリケーションが開いた最近のドキュメント一覧に簡単にアクセスできます。
 
 __JumpList:__
 
@@ -54,13 +57,13 @@ __Application dock menu:__
 最近のドキュメントにファイルを追加するために、[app.addRecentDocument][addrecentdocument] APIを使用できます:
 
 ```javascript
-app.addRecentDocument('/Users/USERNAME/Desktop/work.type');
+app.addRecentDocument('/Users/USERNAME/Desktop/work.type')
 ```
 
 [app.clearRecentDocuments][clearrecentdocuments] API を使用して、最近のドキュメント一覧を空にできます:
 
 ```javascript
-app.clearRecentDocuments();
+app.clearRecentDocuments()
 ```
 
 ### Windows 留意点
@@ -69,35 +72,35 @@ Windows で、この機能を使用できるようにするために、アプリ
 
 ユーザーがジャンプリストからファイルをクリックしたとき、アプリケーションの新しいインスタンスは、コマンドライン引数にファイルのパスを渡して開始します。
 
-### OS X 留意点
+### macOS 留意点
 
 ファイルが最近のドキュメントメニューからリクエストされた時、 `app` モジュールの `open-file` イベントが発行されます。
 
-## ドックメニュー (OS X)のカスタマイズ
+## ドックメニュー (macOS)のカスタマイズ
 
-通常アプリケーションで使用する共通機能用のショートカットを含める、ドック用のカスタムメニューをOS Xでは指定できます。
+通常アプリケーションで使用する共通機能用のショートカットを含める、ドック用のカスタムメニューをmacOSでは指定できます。
 
 __Dock menu of Terminal.app:__
 
 <img src="https://cloud.githubusercontent.com/assets/639601/5069962/6032658a-6e9c-11e4-9953-aa84006bdfff.png" height="354" width="341" >
 
-カスタムドックメニューを設定するために、OS Xのみに提供されている `app.dock.setMenu` APIを使用できます。
+カスタムドックメニューを設定するために、macOSのみに提供されている `app.dock.setMenu` APIを使用できます。
 
 ```javascript
-const electron = require('electron');
-const app = electron.app;
-const Menu = electron.Menu;
+const {app, Menu} = require('electron')
 
-var dockMenu = Menu.buildFromTemplate([
-  { label: 'New Window', click: function() { console.log('New Window'); } },
-  { label: 'New Window with Settings', submenu: [
-    { label: 'Basic' },
-    { label: 'Pro'}
+const dockMenu = Menu.buildFromTemplate([
+  {label: 'New Window', click () { console.log('New Window') }},
+  {label: 'New Window with Settings',
+  submenu: [
+    {label: 'Basic'},
+    {label: 'Pro'}
   ]},
-  { label: 'New Command...'}
-]);
-app.dock.setMenu(dockMenu);
+  {label: 'New Command...'}
+])
+app.dock.setMenu(dockMenu)
 ```
+
 
 ## ユーザータスク (Windows)
 
@@ -112,7 +115,7 @@ __Internet Explorerのタスク:__
 
 ![IE](http://i.msdn.microsoft.com/dynimg/IC420539.png)
 
-実際のメニューであるOS Xのドックメニューとは異なり、ユーザーがタスクをクリックしたとき、Windowsではユーザータスクはアプリケーションのショートカットのように動作し、プログラムは指定された引数を実行します。
+実際のメニューであるmacOSのドックメニューとは異なり、ユーザーがタスクをクリックしたとき、Windowsではユーザータスクはアプリケーションのショートカットのように動作し、プログラムは指定された引数を実行します。
 
 アプリケーション用のユーザータスクを設定するために、[app.setUserTasks][setusertaskstasks] APIを使用できます:
 
@@ -126,13 +129,13 @@ app.setUserTasks([
     title: 'New Window',
     description: 'Create a new window'
   }
-]);
+])
 ```
 
 タスクリストをクリアするために、`app.setUserTasks` をコールし、配列を空にします。
 
 ```javascript
-app.setUserTasks([]);
+app.setUserTasks([])
 ```
 
 アプリケーションを閉じた後もユーザータスクは表示されていてるので、アプリケーションをアンインストールするまではタスクに指定したアイコンとプログラムのパスは存在し続けてる必要があります。
@@ -153,32 +156,32 @@ __Windows Media Playerの縮小表示ツールバー:__
 アプリケーションに縮小表示ツールバーを設定するために、[BrowserWindow.setThumbarButtons][setthumbarbuttons]を使えます:
 
 ```javascript
-const BrowserWindow = require('electron').BrowserWindow;
-const path = require('path');
+const {BrowserWindow} = require('electron')
+const path = require('path')
 
-var win = new BrowserWindow({
+let win = new BrowserWindow({
   width: 800,
   height: 600
-});
+})
 win.setThumbarButtons([
   {
-    tooltip: "button1",
+    tooltip: 'button1',
     icon: path.join(__dirname, 'button1.png'),
-    click: function() { console.log("button2 clicked"); }
+    click () { console.log('button2 clicked') }
   },
   {
-    tooltip: "button2",
+    tooltip: 'button2',
     icon: path.join(__dirname, 'button2.png'),
-    flags:['enabled', 'dismissonclick'],
-    click: function() { console.log("button2 clicked."); }
+    flags: ['enabled', 'dismissonclick'],
+    click () { console.log('button2 clicked.') }
   }
-]);
+])
 ```
 
 縮小表示ツールバーボタンをクリアするために、 `BrowserWindow.setThumbarButtons` をコールして配列を空にします：
 
 ```javascript
-win.setThumbarButtons([]);
+win.setThumbarButtons([])
 ```
 
 ## Unity ランチャーショートカット (Linux)
@@ -189,25 +192,22 @@ __Audaciousのランチャーショートカット:__
 
 ![audacious](https://help.ubuntu.com/community/UnityLaunchersAndDesktopFiles?action=AttachFile&do=get&target=shortcuts.png)
 
-## タスクバーの進行状況バー (Windows & Unity)
+## タスクバーの進行状況バー (Windows, macOS, Unity)
 
 Windowsでは、タスクバーボタンは、進行状況バーを表示するのに使えます。ウィンドウを切り替えることなくウィンドウの進行状況情報をユーザーに提供することができます。
 
+macOSではプログレスバーはドックアイコンの一部として表示されます。
 Unity DEは、ランチャーに進行状況バーの表示をするのと同様の機能を持っています。
 
 __タスクバーボタン上の進行状況バー:__
 
 ![Taskbar Progress Bar](https://cloud.githubusercontent.com/assets/639601/5081682/16691fda-6f0e-11e4-9676-49b6418f1264.png)
 
-__Unityランチャーでの進行状況バー:__
-
-![Unity Launcher](https://cloud.githubusercontent.com/assets/639601/5081747/4a0a589e-6f0f-11e4-803f-91594716a546.png)
-
 ウィンドウに進行状況バーを設定するために、[BrowserWindow.setProgressBar][setprogressbar] APIを使えます:
 
 ```javascript
-var window = new BrowserWindow({...});
-window.setProgressBar(0.5);
+let win = new BrowserWindow()
+win.setProgressBar(0.5)
 ```
 
 ## タスクバーでアイコンをオーバーレイする (Windows)
@@ -223,13 +223,13 @@ __タスクバーボタンでのオーバーレイ:__
 ウィンドウでオーバーレイアイコンを設定するために、[BrowserWindow.setOverlayIcon][setoverlayicon] APIを使用できます。
 
 ```javascript
-var window = new BrowserWindow({...});
-window.setOverlayIcon('path/to/overlay.png', 'Description for overlay');
+let win = new BrowserWindow()
+win.setOverlayIcon('path/to/overlay.png', 'Description for overlay')
 ```
 
-##  Windowのファイル表示 (OS X)
+##  Windowのファイル表示 (macOS)
 
-OS Xでは、ウィンドウがrepresented fileを設定でき、タイトルバー上にファイルのアイコンを表示でき、タイトル上でCommand-クリックまたはControl-クリックをすると、パスがポップアップ表示されます。
+macOSでは、ウィンドウがrepresented fileを設定でき、タイトルバー上にファイルのアイコンを表示でき、タイトル上でCommand-クリックまたはControl-クリックをすると、パスがポップアップ表示されます。
 
 ウィンドウの編集状態を設定できるように、このウィンドウのドキュメントが変更されたかどうかをファイルのアイコンで示せます。
 
@@ -240,9 +240,9 @@ __Represented file ポップアップメニュー:__
 ウィンドウにrepresented fileを設定するために、[BrowserWindow.setRepresentedFilename][setrepresentedfilename] と [BrowserWindow.setDocumentEdited][setdocumentedited] APIsを使えます:
 
 ```javascript
-var window = new BrowserWindow({...});
-window.setRepresentedFilename('/etc/passwd');
-window.setDocumentEdited(true);
+let win = new BrowserWindow()
+win.setRepresentedFilename('/etc/passwd')
+win.setDocumentEdited(true)
 ```
 
 [addrecentdocument]: ../api/app.md#appaddrecentdocumentpath-os-x-windows

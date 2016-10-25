@@ -1,23 +1,20 @@
-# Supported Chrome command line switches
+# Supported Chrome Command Line Switches
 
-This page lists the command line switches used by the Chrome browser that are
-also supported by Electron. You can use
-[app.commandLine.appendSwitch][append-switch] to append them in your app's main
-script before the [ready][ready] event of [app][app] module is emitted:
+> Command line switches supported by Electron.
+
+You can use [app.commandLine.appendSwitch][append-switch] to append them in
+your app's main script before the [ready][ready] event of the [app][app] module
+is emitted:
 
 ```javascript
-const app = require('electron').app;
-app.commandLine.appendSwitch('remote-debugging-port', '8315');
-app.commandLine.appendSwitch('host-rules', 'MAP * 127.0.0.1');
+const {app} = require('electron')
+app.commandLine.appendSwitch('remote-debugging-port', '8315')
+app.commandLine.appendSwitch('host-rules', 'MAP * 127.0.0.1')
 
-app.on('ready', function() {
+app.on('ready', () => {
   // Your code here
-});
+})
 ```
-
-## --client-certificate=`path`
-
-Sets the `path` of client certificate file.
 
 ## --ignore-connections-limit=`domains`
 
@@ -27,18 +24,28 @@ Ignore the connections limit for `domains` list separated by `,`.
 
 Disables the disk cache for HTTP requests.
 
+## --disable-http2
+
+Disable HTTP/2 and SPDY/3.1 protocols.
+
+## --debug=`port` and --debug-brk=`port`
+
+Debug-related flags, see the [Debugging the Main Process][debugging-main-process] guide for details.
+
 ## --remote-debugging-port=`port`
 
 Enables remote debugging over HTTP on the specified `port`.
 
 ## --js-flags=`flags`
 
-Specifies the flags passed to JS engine. It has to be passed when starting
+Specifies the flags passed to the Node JS engine. It has to be passed when starting
 Electron if you want to enable the `flags` in the main process.
 
 ```bash
 $ electron --js-flags="--harmony_proxies --harmony_collections" your-app
 ```
+
+See the [Node documentation][node-cli] or run `node --help` in your terminal for a list of available flags. Additionally, run `node --v8-options` to see a list of flags that specifically refer to Node's V8 JavaScript engine.
 
 ## --proxy-server=`address:port`
 
@@ -56,6 +63,7 @@ list of hosts. This flag has an effect only if used in tandem with
 For example:
 
 ```javascript
+const {app} = require('electron')
 app.commandLine.appendSwitch('proxy-bypass-list', '<local>;*.google.com;*foo.com;1.2.3.4:5678')
 ```
 
@@ -94,6 +102,24 @@ connection, and the endpoint host in a `SOCKS` proxy connection).
 
 Like `--host-rules` but these `rules` only apply to the host resolver.
 
+## --auth-server-whitelist=`url`
+
+A comma-separated list of servers for which integrated authentication is enabled.
+
+For example:
+
+```
+--auth-server-whitelist='*example.com, *foobar.com, *baz'
+```
+
+then any `url` ending with `example.com`, `foobar.com`, `baz` will be considered
+for integrated authentication. Without `*` prefix the url has to match exactly.
+
+## --auth-negotiate-delegate-whitelist=`url`
+
+A comma-separated list of servers for which delegation of user credentials is required.
+Without `*` prefix the url has to match exactly.
+
 ## --ignore-certificate-errors
 
 Ignores certificate related errors.
@@ -112,7 +138,7 @@ Enables net log events to be saved and writes them to `path`.
 
 ## --ssl-version-fallback-min=`version`
 
-Sets the minimum SSL/TLS version ("tls1", "tls1.1" or "tls1.2") that TLS
+Sets the minimum SSL/TLS version (`tls1`, `tls1.1` or `tls1.2`) that TLS
 fallback will accept.
 
 ## --cipher-suite-blacklist=`cipher_suites`
@@ -159,3 +185,5 @@ This switch only works when `--enable-logging` is also passed.
 [append-switch]: app.md#appcommandlineappendswitchswitch-value
 [ready]: app.md#event-ready
 [play-silent-audio]: https://github.com/atom/atom/pull/9485/files
+[debugging-main-process]: ../tutorial/debugging-main-process.md
+[node-cli]: https://nodejs.org/api/cli.html

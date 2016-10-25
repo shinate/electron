@@ -1,27 +1,28 @@
-﻿# contentTracing
+# contentTracing
 
-`content-tracing` 모듈은 Chromium 컨텐츠 모듈단에서 생성된 데이터를 수집하고
-추적하는데 사용됩니다. 이 모듈은 웹 인터페이스를 포함하고 있지 않으며 크롬
-브라우저에서 `chrome://tracing/` 페이지를 열어 생성된 파일을 로드하면 결과를 볼 수
-있습니다.
+> 성능상의 병목 현상과 느린 작업을 찾기 위해 Chromium의 콘텐츠 모듈에서 추적 데이터를
+수집합니다.
+
+이 모듈은 웹 인터페이스를 포함하고 있지 않으며 Chrome 브라우저에서
+`chrome://tracing/` 페이지를 열고 생성된 파일을 로드하면 결과를 볼 수 있습니다.
 
 ```javascript
-const contentTracing = require('electron').contentTracing;
+const {contentTracing} = require('electron')
 
 const options = {
   categoryFilter: '*',
   traceOptions: 'record-until-full,enable-sampling'
-};
+}
 
-contentTracing.startRecording(options, function() {
-  console.log('Tracing started');
+contentTracing.startRecording(options, () => {
+  console.log('Tracing started')
 
-  setTimeout(function() {
-    contentTracing.stopRecording('', function(path) {
-      console.log('Tracing data recorded to ' + path);
-    });
-  }, 5000);
-});
+  setTimeout(() => {
+    contentTracing.stopRecording('', (path) => {
+      console.log('Tracing data recorded to ' + path)
+    })
+  }, 5000)
+})
 ```
 
 ## Methods
@@ -30,12 +31,13 @@ contentTracing.startRecording(options, function() {
 
 ### `contentTracing.getCategories(callback)`
 
-* `callback` Function
+* `callback` 
+  * `categories` String[]
 
 카테고리 그룹 세트를 가져옵니다. 카테고리 그룹은 도달된 코드 경로를 변경할 수 있습니다.
 
 모든 child 프로세스가 `getCategories` 요청을 승인하면 `callback`이 한 번 호출되며
-인자에 카테고리 그룹의 배열이 전달됩니다.
+인수에 카테고리 그룹의 배열이 전달됩니다.
 
 ### `contentTracing.startRecording(options, callback)`
 
@@ -54,7 +56,7 @@ EnableRecording 요청을 받게 됩니다. 모든 child 프로세스가 `startR
 필터는 `-` 접두사를 통해 특정 카테고리 그룹을 제외할 수 있습니다. 카테고리 패턴은 같은
 리스트 내에서 포함과 제외를 함께 사용할 수 없습니다.
 
-예제:
+예시:
 
 * `test_MyTest*`,
 * `test_MyTest*,test_OtherStuff`,
@@ -84,6 +86,7 @@ EnableRecording 요청을 받게 됩니다. 모든 child 프로세스가 `startR
 
 * `resultFilePath` String
 * `callback` Function
+  * `resultFilePath` String
 
 모든 프로세스에서 레코딩을 중지합니다.
 
@@ -126,6 +129,7 @@ Child 프로세스는 일반적으로 추적 데이터와 희귀한 플러시 �
 
 * `resultFilePath` String
 * `callback` Function
+  * `resultFilePath` String
 
 현재 모니터링 추적 데이터를 가져옵니다.
 
@@ -141,6 +145,8 @@ Child 프로세스는 일반적으로 추적 데이터와 희귀한 플러시 �
 ### `contentTracing.getTraceBufferUsage(callback)`
 
 * `callback` Function
+  * `value` Number
+  * `percentage` Number
 
 추적 버퍼 % 전체 상태의 프로세스간 최대치를 가져옵니다. TraceBufferUsage 값이
 결정되면 `callback`이 한 번 호출됩니다.

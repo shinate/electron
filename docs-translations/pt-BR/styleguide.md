@@ -23,7 +23,7 @@ Estas são as formas que escrevemos a documentação do Electron.
 - Argumentos opcionais são indicados quando chamado na lista.
 - Comprimento da linha é de 80 caracteres com colunas quebradas.
 - Métodos específicos para uma plataforma são postos em itálico seguindo o cabeçalho do método.
- - ```### `method(foo, bar)` _OS X_```
+ - ```### `method(foo, bar)` _macOS_```
 
 ## Lendo a documentação do Electron
 
@@ -71,7 +71,7 @@ O evento é uma cadeia que é utilizada após um `.on` em um método listner. Se
 crie algo parecido com o exemplo abaixo:
 
 ```javascript
-Alarm.on('wake-up', function(time) {
+Alarm.on('wake-up', function (time) {
   console.log(time)
 })
 ```

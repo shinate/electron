@@ -54,7 +54,6 @@
 
 #include "atom/common/atom_command_line.h"
 #include "base/base_paths.h"
-#include "base/basictypes.h"
 #include "base/bind.h"
 #include "base/command_line.h"
 #include "base/files/file_path.h"
@@ -76,10 +75,11 @@
 #include "base/strings/sys_string_conversions.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/threading/platform_thread.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "base/time/time.h"
 #include "base/timer/timer.h"
 #include "content/public/browser/browser_thread.h"
-#include "net/base/net_util.h"
+#include "net/base/network_interfaces.h"
 #include "ui/base/l10n/l10n_util.h"
 
 #if defined(TOOLKIT_VIEWS) && defined(OS_LINUX) && !defined(OS_CHROMEOS)
@@ -111,7 +111,7 @@ const base::FilePath::CharType kSingletonCookieFilename[] =
 
 const base::FilePath::CharType kSingletonLockFilename[] = FILE_PATH_LITERAL("SingletonLock");
 const base::FilePath::CharType kSingletonSocketFilename[] =
-      FILE_PATH_LITERAL("SingletonSocket");
+      FILE_PATH_LITERAL("SS");
 
 // Set the close-on-exec bit on a file descriptor.
 // Returns 0 on success, -1 on failure.
@@ -222,7 +222,7 @@ int SetupSocketOnly() {
   int sock = socket(PF_UNIX, SOCK_STREAM, 0);
   PCHECK(sock >= 0) << "socket() failed";
 
-  int rv = net::SetNonBlocking(sock);
+  int rv = base::SetNonBlocking(sock);
   DCHECK_EQ(0, rv) << "Failed to make non-blocking socket.";
   rv = SetCloseOnExec(sock);
   DCHECK_EQ(0, rv) << "Failed to set CLOEXEC on socket.";
@@ -346,6 +346,21 @@ std::string GenerateCookie() {
 
 bool CheckCookie(const base::FilePath& path, const base::FilePath& cookie) {
   return (cookie == ReadLink(path));
+}
+
+bool IsAppSandboxed() {
+#if defined(OS_MACOSX)
+  // NB: There is no sane API for this, we have to just guess by
+  // reading tea leaves
+  base::FilePath home_dir;
+  if (!base::PathService::Get(base::DIR_HOME, &home_dir)) {
+    return false;
+  }
+
+  return home_dir.value().find("Library/Containers") != std::string::npos;
+#else
+  return false;
+#endif  // defined(OS_MACOSX)
 }
 
 bool ConnectSocket(ScopedSocket* socket,
@@ -577,7 +592,7 @@ void ProcessSingleton::LinuxWatcher::OnFileCanReadWithoutBlocking(int fd) {
     PLOG(ERROR) << "accept() failed";
     return;
   }
-  int rv = net::SetNonBlocking(connection_socket);
+  int rv = base::SetNonBlocking(connection_socket);
   DCHECK_EQ(0, rv) << "Failed to make non-blocking socket.";
   SocketReader* reader = new SocketReader(this,
                                           ui_message_loop_,
@@ -717,6 +732,9 @@ ProcessSingleton::ProcessSingleton(
     const NotificationCallback& notification_callback)
     : notification_callback_(notification_callback),
       current_pid_(base::GetCurrentProcId()) {
+  // The user_data_dir may have not been created yet.
+  base::CreateDirectoryAndGetError(user_data_dir, nullptr);
+
   socket_path_ = user_data_dir.Append(kSingletonSocketFilename);
   lock_path_ = user_data_dir.Append(kSingletonLockFilename);
   cookie_path_ = user_data_dir.Append(kSingletonCookieFilename);
@@ -943,12 +961,26 @@ bool ProcessSingleton::Create() {
 #endif
   }
 
-  // Create the socket file somewhere in /tmp which is usually mounted as a
-  // normal filesystem. Some network filesystems (notably AFS) are screwy and
-  // do not support Unix domain sockets.
-  if (!socket_dir_.CreateUniqueTempDir()) {
-    LOG(ERROR) << "Failed to create socket directory.";
-    return false;
+  if (IsAppSandboxed()) {
+    // For sandboxed applications, the tmp dir could be too long to fit
+    // addr->sun_path, so we need to make it as short as possible.
+    base::FilePath tmp_dir;
+    if (!base::GetTempDir(&tmp_dir)) {
+      LOG(ERROR) << "Failed to get temporary directory.";
+      return false;
+    }
+    if (!socket_dir_.Set(tmp_dir.Append("S"))) {
+      LOG(ERROR) << "Failed to set socket directory.";
+      return false;
+    }
+  } else {
+    // Create the socket file somewhere in /tmp which is usually mounted as a
+    // normal filesystem. Some network filesystems (notably AFS) are screwy and
+    // do not support Unix domain sockets.
+    if (!socket_dir_.CreateUniqueTempDir()) {
+      LOG(ERROR) << "Failed to create socket directory.";
+      return false;
+    }
   }
 
   // Check that the directory was created with the correct permissions.
@@ -990,8 +1022,8 @@ bool ProcessSingleton::Create() {
   // In Electron the ProcessSingleton is created earlier than the IO
   // thread gets created, so we have to postpone the call until message
   // loop is up an running.
-  scoped_refptr<base::SingleThreadTaskRunner> task_runner(
-      base::ThreadTaskRunnerHandle::Get());
+  scoped_refptr<base::SingleThreadTaskRunner> task_runner =
+      base::ThreadTaskRunnerHandle::Get();
   task_runner->PostTask(
       FROM_HERE,
       base::Bind(&ProcessSingleton::StartListening,

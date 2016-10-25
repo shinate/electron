@@ -24,7 +24,7 @@ or [writing Electron documentation](#writing-electron-documentation).
 - Optional arguments are denoted when called out in list.
 - Line length is 80-column wrapped.
 - Platform specific methods are noted in italics following method header.
- - ```### `method(foo, bar)` _OS X_```
+ - ```### `method(foo, bar)` _macOS_```
 - Prefer 'in the ___ process' over 'on'
 
 ### Переклад документації
@@ -39,7 +39,7 @@ or [writing Electron documentation](#writing-electron-documentation).
 - Translate the files.
 - Update the `README.md` within your language directory to link to the files
   you have translated.
-- Add a link to your translation directory on the main Electron [README](https://github.com/atom/electron#documentation-translations).
+- Add a link to your translation directory on the main Electron [README](https://github.com/electron/electron#documentation-translations).
 
 ## Читання документації Electron
 
@@ -91,7 +91,7 @@ a value it and its type is noted below. If you were to listen and respond to
 this event it might look something like this:
 
 ```javascript
-Alarm.on('wake-up', function(time) {
+Alarm.on('wake-up', function (time) {
   console.log(time)
 })
 ```

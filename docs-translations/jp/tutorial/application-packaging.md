@@ -43,29 +43,29 @@ $ asar list /path/to/example.asar
 `asar` アーカイブ内のファイルを読み込む:
 
 ```javascript
-const fs = require('fs');
-fs.readFileSync('/path/to/example.asar/file.txt');
+const fs = require('fs')
+fs.readFileSync('/path/to/example.asar/file.txt')
 ```
 
 アーカイブのルート直下にあるすべてのファイルを一覧にする:
 
 ```javascript
-const fs = require('fs');
-fs.readdirSync('/path/to/example.asar');
+const fs = require('fs')
+fs.readdirSync('/path/to/example.asar')
 ```
 
 アーカイブからモジュールを使用する:
 
 ```javascript
-require('/path/to/example.asar/dir/module.js');
+require('/path/to/example.asar/dir/module.js')
 ```
 
 `BrowserWindow` を使って `asar` アーカイブ内の Web ページを表示することもできます:
 
 ```javascript
-const BrowserWindow = require('electron').BrowserWindow;
-var win = new BrowserWindow({width: 800, height: 600});
-win.loadURL('file:///path/to/example.asar/static/index.html');
+const {BrowserWindow} = require('electron')
+let win = new BrowserWindow({width: 800, height: 600})
+win.loadURL('file:///path/to/example.asar/static/index.html')
 ```
 
 ### Web API
@@ -78,7 +78,7 @@ Node API と同様、`asar` アーカイブはディレクトリのように扱�
 ```html
 <script>
 var $ = require('./jquery.min.js');
-$.get('file:///path/to/example.asar/file.txt', function(data) {
+$.get('file:///path/to/example.asar/file.txt', (data) => {
   console.log(data);
 });
 </script>
@@ -89,15 +89,15 @@ $.get('file:///path/to/example.asar/file.txt', function(data) {
 アーカイブのチェックサムを検証する等の幾つかのケースでは、`asar` アーカイブをファイルとして読み込む必要があります。この目的のために、 `asar` サポートしないオリジナルの `fs` API を提供するビルトインの `original-fs` モジュールを使用できます。
 
 ```javascript
-var originalFs = require('original-fs');
-originalFs.readFileSync('/path/to/example.asar');
+const originalFs = require('original-fs')
+originalFs.readFileSync('/path/to/example.asar')
 ```
 
 `process.noAssar` に `true` をセットしても `fs` モジュールの `asar` サポートを無効にすることができます：
 
 ```javascript
-process.noAsar = true;
-fs.readFileSync('/path/to/example.asar');
+process.noAsar = true
+fs.readFileSync('/path/to/example.asar')
 ```
 
 ## Node API の制限
@@ -146,4 +146,4 @@ $ asar pack app app.asar --unpack *.node
 
 このコマンドを実行した後、`app.asar` とは別に、アンパックされたファイルを含んだ`app.asar.unpacked` フォルダーが生成されます。ユーザーに提供するときには、`app.asar` と一緒にコピーしなければなりません。
 
-[asar]: https://github.com/atom/asar
+[asar]: https://github.com/electron/asar

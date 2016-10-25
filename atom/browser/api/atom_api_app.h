@@ -6,6 +6,7 @@
 #define ATOM_BROWSER_API_ATOM_API_APP_H_
 
 #include <string>
+#include <vector>
 
 #include "atom/browser/api/event_emitter.h"
 #include "atom/browser/atom_browser_client.h"
@@ -14,6 +15,11 @@
 #include "chrome/browser/process_singleton.h"
 #include "content/public/browser/gpu_data_manager_observer.h"
 #include "native_mate/handle.h"
+#include "net/base/completion_callback.h"
+
+#if defined(USE_NSS_CERTS)
+#include "chrome/browser/certificate_manager_model.h"
+#endif
 
 namespace base {
 class FilePath;
@@ -21,22 +27,44 @@ class FilePath;
 
 namespace mate {
 class Arguments;
-}
+}  // namespace mate
 
 namespace atom {
+
+#if defined(OS_WIN)
+enum class JumpListResult : int;
+#endif
 
 namespace api {
 
 class App : public AtomBrowserClient::Delegate,
-            public mate::EventEmitter,
+            public mate::EventEmitter<App>,
             public BrowserObserver,
             public content::GpuDataManagerObserver {
  public:
   static mate::Handle<App> Create(v8::Isolate* isolate);
 
+  static void BuildPrototype(v8::Isolate* isolate,
+                             v8::Local<v8::FunctionTemplate> prototype);
+
+  // Called when window with disposition needs to be created.
+  void OnCreateWindow(const GURL& target_url,
+                      const std::string& frame_name,
+                      WindowOpenDisposition disposition,
+                      const std::vector<base::string16>& features,
+                      int render_process_id,
+                      int render_frame_id);
+
+#if defined(USE_NSS_CERTS)
+  void OnCertificateManagerModelCreated(
+      std::unique_ptr<base::DictionaryValue> options,
+      const net::CompletionCallback& callback,
+      std::unique_ptr<CertificateManagerModel> model);
+#endif
+
  protected:
-  App();
-  virtual ~App();
+  explicit App(v8::Isolate* isolate);
+  ~App() override;
 
   // BrowserObserver:
   void OnBeforeQuit(bool* prevent_default) override;
@@ -47,13 +75,20 @@ class App : public AtomBrowserClient::Delegate,
   void OnOpenURL(const std::string& url) override;
   void OnActivate(bool has_visible_windows) override;
   void OnWillFinishLaunching() override;
-  void OnFinishLaunching() override;
-  void OnLogin(LoginHandler* login_handler) override;
+  void OnFinishLaunching(const base::DictionaryValue& launch_info) override;
+  void OnLogin(LoginHandler* login_handler,
+               const base::DictionaryValue& request_details) override;
+  void OnAccessibilitySupportChanged() override;
+#if defined(OS_MACOSX)
+  void OnContinueUserActivity(
+      bool* prevent_default,
+      const std::string& type,
+      const base::DictionaryValue& user_info) override;
+#endif
 
   // content::ContentBrowserClient:
   void AllowCertificateError(
-      int render_process_id,
-      int render_frame_id,
+      content::WebContents* web_contents,
       int cert_error,
       const net::SSLInfo& ssl_info,
       const GURL& request_url,
@@ -66,14 +101,10 @@ class App : public AtomBrowserClient::Delegate,
   void SelectClientCertificate(
       content::WebContents* web_contents,
       net::SSLCertRequestInfo* cert_request_info,
-      scoped_ptr<content::ClientCertificateDelegate> delegate) override;
+      std::unique_ptr<content::ClientCertificateDelegate> delegate) override;
 
   // content::GpuDataManagerObserver:
-  void OnGpuProcessCrashed(base::TerminationStatus exit_code) override;
-
-  // mate::Wrappable:
-  mate::ObjectTemplateBuilder GetObjectTemplateBuilder(
-      v8::Isolate* isolate) override;
+  void OnGpuProcessCrashed(base::TerminationStatus status) override;
 
  private:
   // Get/Set the pre-defined path in PathService.
@@ -83,16 +114,31 @@ class App : public AtomBrowserClient::Delegate,
                const base::FilePath& path);
 
   void SetDesktopName(const std::string& desktop_name);
-  void AllowNTLMCredentialsForAllDomains(bool should_allow);
+  std::string GetLocale();
   bool MakeSingleInstance(
       const ProcessSingleton::NotificationCallback& callback);
-  std::string GetLocale();
-
-#if defined(OS_WIN)
-  bool IsAeroGlassEnabled();
+  void ReleaseSingleInstance();
+  bool Relaunch(mate::Arguments* args);
+  void DisableHardwareAcceleration(mate::Arguments* args);
+  bool IsAccessibilitySupportEnabled();
+#if defined(USE_NSS_CERTS)
+  void ImportCertificate(const base::DictionaryValue& options,
+                         const net::CompletionCallback& callback);
 #endif
 
-  scoped_ptr<ProcessSingleton> process_singleton_;
+#if defined(OS_WIN)
+  // Get the current Jump List settings.
+  v8::Local<v8::Value> GetJumpListSettings();
+
+  // Set or remove a custom Jump List for the application.
+  JumpListResult SetJumpList(v8::Local<v8::Value> val, mate::Arguments* args);
+#endif  // defined(OS_WIN)
+
+  std::unique_ptr<ProcessSingleton> process_singleton_;
+
+#if defined(USE_NSS_CERTS)
+  std::unique_ptr<CertificateManagerModel> certificate_manager_model_;
+#endif
 
   DISALLOW_COPY_AND_ASSIGN(App);
 };

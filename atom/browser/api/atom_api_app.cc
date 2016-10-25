@@ -14,23 +14,30 @@
 #include "atom/browser/atom_browser_main_parts.h"
 #include "atom/browser/browser.h"
 #include "atom/browser/login_handler.h"
+#include "atom/browser/relauncher.h"
+#include "atom/common/atom_command_line.h"
 #include "atom/common/native_mate_converters/callback.h"
-#include "atom/common/native_mate_converters/net_converter.h"
 #include "atom/common/native_mate_converters/file_path_converter.h"
 #include "atom/common/native_mate_converters/gurl_converter.h"
 #include "atom/common/native_mate_converters/image_converter.h"
+#include "atom/common/native_mate_converters/net_converter.h"
+#include "atom/common/native_mate_converters/value_converter.h"
 #include "atom/common/node_includes.h"
 #include "atom/common/options_switches.h"
 #include "base/command_line.h"
 #include "base/environment.h"
 #include "base/files/file_path.h"
+#include "base/files/file_util.h"
 #include "base/path_service.h"
+#include "base/strings/string_util.h"
 #include "brightray/browser/brightray_paths.h"
 #include "chrome/common/chrome_paths.h"
+#include "content/public/browser/browser_accessibility_state.h"
 #include "content/public/browser/client_certificate_delegate.h"
 #include "content/public/browser/gpu_data_manager.h"
 #include "content/public/browser/render_frame_host.h"
 #include "content/public/common/content_switches.h"
+#include "media/audio/audio_manager.h"
 #include "native_mate/dictionary.h"
 #include "native_mate/object_template_builder.h"
 #include "net/ssl/ssl_cert_request_info.h"
@@ -38,8 +45,8 @@
 #include "ui/gfx/image/image.h"
 
 #if defined(OS_WIN)
+#include "atom/browser/ui/win/jump_list.h"
 #include "base/strings/utf_string_conversions.h"
-#include "ui/base/win/shell.h"
 #endif
 
 using atom::Browser;
@@ -65,8 +72,246 @@ struct Converter<Browser::UserTask> {
     return true;
   }
 };
+
+using atom::JumpListItem;
+using atom::JumpListCategory;
+using atom::JumpListResult;
+
+template<>
+struct Converter<JumpListItem::Type> {
+  static bool FromV8(v8::Isolate* isolate, v8::Local<v8::Value> val,
+                     JumpListItem::Type* out) {
+    std::string item_type;
+    if (!ConvertFromV8(isolate, val, &item_type))
+      return false;
+
+    if (item_type == "task")
+      *out = JumpListItem::Type::TASK;
+    else if (item_type == "separator")
+      *out = JumpListItem::Type::SEPARATOR;
+    else if (item_type == "file")
+      *out = JumpListItem::Type::FILE;
+    else
+      return false;
+
+    return true;
+  }
+
+  static v8::Local<v8::Value> ToV8(v8::Isolate* isolate,
+                                   JumpListItem::Type val) {
+    std::string item_type;
+    switch (val) {
+      case JumpListItem::Type::TASK:
+        item_type = "task";
+        break;
+
+      case JumpListItem::Type::SEPARATOR:
+        item_type = "separator";
+        break;
+
+      case JumpListItem::Type::FILE:
+        item_type = "file";
+        break;
+    }
+    return mate::ConvertToV8(isolate, item_type);
+  }
+};
+
+template<>
+struct Converter<JumpListItem> {
+  static bool FromV8(v8::Isolate* isolate, v8::Local<v8::Value> val,
+                     JumpListItem* out) {
+    mate::Dictionary dict;
+    if (!ConvertFromV8(isolate, val, &dict))
+      return false;
+
+    if (!dict.Get("type", &(out->type)))
+      return false;
+
+    switch (out->type) {
+      case JumpListItem::Type::TASK:
+        if (!dict.Get("program", &(out->path)) ||
+            !dict.Get("title", &(out->title)))
+          return false;
+
+        if (dict.Get("iconPath", &(out->icon_path)) &&
+            !dict.Get("iconIndex", &(out->icon_index)))
+          return false;
+
+        dict.Get("args", &(out->arguments));
+        dict.Get("description", &(out->description));
+        return true;
+
+      case JumpListItem::Type::SEPARATOR:
+        return true;
+
+      case JumpListItem::Type::FILE:
+        return dict.Get("path", &(out->path));
+    }
+
+    assert(false);
+    return false;
+  }
+
+  static v8::Local<v8::Value> ToV8(v8::Isolate* isolate,
+                                   const JumpListItem& val) {
+    mate::Dictionary dict = mate::Dictionary::CreateEmpty(isolate);
+    dict.Set("type", val.type);
+
+    switch (val.type) {
+      case JumpListItem::Type::TASK:
+        dict.Set("program", val.path);
+        dict.Set("args", val.arguments);
+        dict.Set("title", val.title);
+        dict.Set("iconPath", val.icon_path);
+        dict.Set("iconIndex", val.icon_index);
+        dict.Set("description", val.description);
+        break;
+
+      case JumpListItem::Type::SEPARATOR:
+        break;
+
+      case JumpListItem::Type::FILE:
+        dict.Set("path", val.path);
+        break;
+    }
+    return dict.GetHandle();
+  }
+};
+
+template<>
+struct Converter<JumpListCategory::Type> {
+  static bool FromV8(v8::Isolate* isolate, v8::Local<v8::Value> val,
+                     JumpListCategory::Type* out) {
+    std::string category_type;
+    if (!ConvertFromV8(isolate, val, &category_type))
+      return false;
+
+    if (category_type == "tasks")
+      *out = JumpListCategory::Type::TASKS;
+    else if (category_type == "frequent")
+      *out = JumpListCategory::Type::FREQUENT;
+    else if (category_type == "recent")
+      *out = JumpListCategory::Type::RECENT;
+    else if (category_type == "custom")
+      *out = JumpListCategory::Type::CUSTOM;
+    else
+      return false;
+
+    return true;
+  }
+
+  static v8::Local<v8::Value> ToV8(v8::Isolate* isolate,
+                                   JumpListCategory::Type val) {
+    std::string category_type;
+    switch (val) {
+      case JumpListCategory::Type::TASKS:
+        category_type = "tasks";
+        break;
+
+      case JumpListCategory::Type::FREQUENT:
+        category_type = "frequent";
+        break;
+
+      case JumpListCategory::Type::RECENT:
+        category_type = "recent";
+        break;
+
+      case JumpListCategory::Type::CUSTOM:
+        category_type = "custom";
+        break;
+    }
+    return mate::ConvertToV8(isolate, category_type);
+  }
+};
+
+template<>
+struct Converter<JumpListCategory> {
+  static bool FromV8(v8::Isolate* isolate, v8::Local<v8::Value> val,
+                     JumpListCategory* out) {
+    mate::Dictionary dict;
+    if (!ConvertFromV8(isolate, val, &dict))
+      return false;
+
+    if (dict.Get("name", &(out->name)) && out->name.empty())
+      return false;
+
+    if (!dict.Get("type", &(out->type))) {
+      if (out->name.empty())
+        out->type = JumpListCategory::Type::TASKS;
+      else
+        out->type = JumpListCategory::Type::CUSTOM;
+    }
+
+    if ((out->type == JumpListCategory::Type::TASKS) ||
+        (out->type == JumpListCategory::Type::CUSTOM)) {
+      if (!dict.Get("items", &(out->items)))
+        return false;
+    }
+
+    return true;
+  }
+};
+
+// static
+template<>
+struct Converter<JumpListResult> {
+  static v8::Local<v8::Value> ToV8(v8::Isolate* isolate, JumpListResult val) {
+    std::string result_code;
+    switch (val) {
+      case JumpListResult::SUCCESS:
+        result_code = "ok";
+        break;
+
+      case JumpListResult::ARGUMENT_ERROR:
+        result_code = "argumentError";
+        break;
+
+      case JumpListResult::GENERIC_ERROR:
+        result_code = "error";
+        break;
+
+      case JumpListResult::CUSTOM_CATEGORY_SEPARATOR_ERROR:
+        result_code = "invalidSeparatorError";
+        break;
+
+      case JumpListResult::MISSING_FILE_TYPE_REGISTRATION_ERROR:
+        result_code = "fileTypeRegistrationError";
+        break;
+
+      case JumpListResult::CUSTOM_CATEGORY_ACCESS_DENIED_ERROR:
+        result_code = "customCategoryAccessDeniedError";
+        break;
+    }
+    return ConvertToV8(isolate, result_code);
+  }
+};
 #endif
 
+template<>
+struct Converter<Browser::LoginItemSettings> {
+  static bool FromV8(v8::Isolate* isolate, v8::Local<v8::Value> val,
+                     Browser::LoginItemSettings* out) {
+    mate::Dictionary dict;
+    if (!ConvertFromV8(isolate, val, &dict))
+      return false;
+
+    dict.Get("openAtLogin", &(out->open_at_login));
+    dict.Get("openAsHidden", &(out->open_as_hidden));
+    return true;
+  }
+
+  static v8::Local<v8::Value> ToV8(v8::Isolate* isolate,
+                                   Browser::LoginItemSettings val) {
+    mate::Dictionary dict = mate::Dictionary::CreateEmpty(isolate);
+    dict.Set("openAtLogin", val.open_at_login);
+    dict.Set("openAsHidden", val.open_as_hidden);
+    dict.Set("restoreState", val.restore_state);
+    dict.Set("wasOpenedAtLogin", val.opened_at_login);
+    dict.Set("wasOpenedAsHidden", val.opened_as_hidden);
+    return dict.GetHandle();
+  }
+};
 }  // namespace mate
 
 
@@ -106,6 +351,8 @@ int GetPathConstant(const std::string& name) {
     return chrome::DIR_USER_PICTURES;
   else if (name == "videos")
     return chrome::DIR_USER_VIDEOS;
+  else if (name == "pepperFlashSystemPlugin")
+    return chrome::FILE_PEPPER_FLASH_SYSTEM_PLUGIN;
   else
     return -1;
 }
@@ -137,13 +384,12 @@ void OnClientCertificateSelected(
     return;
   }
 
-  v8::Local<v8::Object> data;
+  std::string data;
   if (!cert_data.Get("data", &data))
     return;
 
   auto certs = net::X509Certificate::CreateCertificateListFromBytes(
-      node::Buffer::Data(data), node::Buffer::Length(data),
-      net::X509Certificate::FORMAT_AUTO);
+      data.c_str(), data.length(), net::X509Certificate::FORMAT_AUTO);
   if (certs.size() > 0)
     delegate->ContinueWithCertificate(certs[0].get());
 }
@@ -157,12 +403,46 @@ void PassLoginInformation(scoped_refptr<LoginHandler> login_handler,
     login_handler->CancelAuth();
 }
 
+#if defined(USE_NSS_CERTS)
+int ImportIntoCertStore(
+    CertificateManagerModel* model,
+    const base::DictionaryValue& options) {
+  std::string file_data, cert_path;
+  base::string16 password;
+  net::CertificateList imported_certs;
+  int rv = -1;
+  options.GetString("certificate", &cert_path);
+  options.GetString("password", &password);
+
+  if (!cert_path.empty()) {
+    if (base::ReadFileToString(base::FilePath(cert_path), &file_data)) {
+      auto module = model->cert_db()->GetPublicModule();
+      rv = model->ImportFromPKCS12(module,
+                                   file_data,
+                                   password,
+                                   true,
+                                   &imported_certs);
+      if (imported_certs.size() > 1) {
+        auto it = imported_certs.begin();
+        ++it;  // skip first which would  be the client certificate.
+        for (; it != imported_certs.end(); ++it)
+          rv &= model->SetCertTrust(it->get(),
+                                    net::CA_CERT,
+                                    net::NSSCertDatabase::TRUSTED_SSL);
+      }
+    }
+  }
+  return rv;
+}
+#endif
+
 }  // namespace
 
-App::App() {
+App::App(v8::Isolate* isolate) {
   static_cast<AtomBrowserClient*>(AtomBrowserClient::Get())->set_delegate(this);
   Browser::Get()->AddObserver(this);
   content::GpuDataManager::GetInstance()->AddObserver(this);
+  Init(isolate);
 }
 
 App::~App() {
@@ -210,17 +490,36 @@ void App::OnWillFinishLaunching() {
   Emit("will-finish-launching");
 }
 
-void App::OnFinishLaunching() {
-  Emit("ready");
+void App::OnFinishLaunching(const base::DictionaryValue& launch_info) {
+#if defined(OS_LINUX)
+  // Set the application name for audio streams shown in external
+  // applications. Only affects pulseaudio currently.
+  media::AudioManager::SetGlobalAppName(Browser::Get()->GetName());
+#endif
+  Emit("ready", launch_info);
 }
 
-void App::OnLogin(LoginHandler* login_handler) {
+void App::OnAccessibilitySupportChanged() {
+  Emit("accessibility-support-changed", IsAccessibilitySupportEnabled());
+}
+
+#if defined(OS_MACOSX)
+void App::OnContinueUserActivity(
+    bool* prevent_default,
+    const std::string& type,
+    const base::DictionaryValue& user_info) {
+  *prevent_default = Emit("continue-activity", type, user_info);
+}
+#endif
+
+void App::OnLogin(LoginHandler* login_handler,
+                  const base::DictionaryValue& request_details) {
   v8::Locker locker(isolate());
   v8::HandleScope handle_scope(isolate());
   bool prevent_default = Emit(
       "login",
       WebContents::CreateFrom(isolate(), login_handler->GetWebContents()),
-      login_handler->request(),
+      request_details,
       login_handler->auth_info(),
       base::Bind(&PassLoginInformation, make_scoped_refptr(login_handler)));
 
@@ -229,9 +528,29 @@ void App::OnLogin(LoginHandler* login_handler) {
     login_handler->CancelAuth();
 }
 
+void App::OnCreateWindow(const GURL& target_url,
+                         const std::string& frame_name,
+                         WindowOpenDisposition disposition,
+                         const std::vector<base::string16>& features,
+                         int render_process_id,
+                         int render_frame_id) {
+  v8::Locker locker(isolate());
+  v8::HandleScope handle_scope(isolate());
+  content::RenderFrameHost* rfh =
+      content::RenderFrameHost::FromID(render_process_id, render_frame_id);
+  content::WebContents* web_contents =
+      content::WebContents::FromRenderFrameHost(rfh);
+  if (web_contents) {
+    auto api_web_contents = WebContents::CreateFrom(isolate(), web_contents);
+    api_web_contents->OnCreateWindow(target_url,
+                                     frame_name,
+                                     disposition,
+                                     features);
+  }
+}
+
 void App::AllowCertificateError(
-    int pid,
-    int fid,
+    content::WebContents* web_contents,
     int cert_error,
     const net::SSLInfo& ssl_info,
     const GURL& request_url,
@@ -241,9 +560,6 @@ void App::AllowCertificateError(
     bool expired_previous_decision,
     const base::Callback<void(bool)>& callback,
     content::CertificateRequestResultType* request) {
-  auto rfh = content::RenderFrameHost::FromID(pid, fid);
-  auto web_contents = content::WebContents::FromRenderFrameHost(rfh);
-
   v8::Locker locker(isolate());
   v8::HandleScope handle_scope(isolate());
   bool prevent_default = Emit("certificate-error",
@@ -261,7 +577,7 @@ void App::AllowCertificateError(
 void App::SelectClientCertificate(
     content::WebContents* web_contents,
     net::SSLCertRequestInfo* cert_request_info,
-    scoped_ptr<content::ClientCertificateDelegate> delegate) {
+    std::unique_ptr<content::ClientCertificateDelegate> delegate) {
   std::shared_ptr<content::ClientCertificateDelegate>
       shared_delegate(delegate.release());
   bool prevent_default =
@@ -279,8 +595,9 @@ void App::SelectClientCertificate(
         cert_request_info->client_certs[0].get());
 }
 
-void App::OnGpuProcessCrashed(base::TerminationStatus exit_code) {
-  Emit("gpu-process-crashed");
+void App::OnGpuProcessCrashed(base::TerminationStatus status) {
+  Emit("gpu-process-crashed",
+    status == base::TERMINATION_STATUS_PROCESS_WAS_KILLED);
 }
 
 base::FilePath App::GetPath(mate::Arguments* args, const std::string& name) {
@@ -290,43 +607,36 @@ base::FilePath App::GetPath(mate::Arguments* args, const std::string& name) {
   if (key >= 0)
     succeed = PathService::Get(key, &path);
   if (!succeed)
-    args->ThrowError("Failed to get path");
+    args->ThrowError("Failed to get '" + name + "' path");
   return path;
 }
 
 void App::SetPath(mate::Arguments* args,
                   const std::string& name,
                   const base::FilePath& path) {
+  if (!path.IsAbsolute()) {
+    args->ThrowError("Path must be absolute");
+    return;
+  }
+
   bool succeed = false;
   int key = GetPathConstant(name);
   if (key >= 0)
-    succeed = PathService::Override(key, path);
+    succeed = PathService::OverrideAndCreateIfNeeded(key, path, true, false);
   if (!succeed)
     args->ThrowError("Failed to set path");
 }
 
 void App::SetDesktopName(const std::string& desktop_name) {
 #if defined(OS_LINUX)
-  scoped_ptr<base::Environment> env(base::Environment::Create());
+  std::unique_ptr<base::Environment> env(base::Environment::Create());
   env->SetVar("CHROME_DESKTOP", desktop_name);
 #endif
-}
-
-void App::AllowNTLMCredentialsForAllDomains(bool should_allow) {
-  auto browser_context = static_cast<AtomBrowserContext*>(
-        AtomBrowserMainParts::Get()->browser_context());
-  browser_context->AllowNTLMCredentialsForAllDomains(should_allow);
 }
 
 std::string App::GetLocale() {
   return l10n_util::GetApplicationLocale("");
 }
-
-#if defined(OS_WIN)
-bool App::IsAeroGlassEnabled() {
-  return ui::win::IsAeroGlassEnabled();
-}
-#endif
 
 bool App::MakeSingleInstance(
     const ProcessSingleton::NotificationCallback& callback) {
@@ -350,10 +660,163 @@ bool App::MakeSingleInstance(
   }
 }
 
-mate::ObjectTemplateBuilder App::GetObjectTemplateBuilder(
-    v8::Isolate* isolate) {
+void App::ReleaseSingleInstance() {
+  if (process_singleton_.get()) {
+    process_singleton_->Cleanup();
+    process_singleton_.reset();
+  }
+}
+
+bool App::Relaunch(mate::Arguments* js_args) {
+  // Parse parameters.
+  bool override_argv = false;
+  base::FilePath exec_path;
+  relauncher::StringVector args;
+
+  mate::Dictionary options;
+  if (js_args->GetNext(&options)) {
+    if (options.Get("execPath", &exec_path) | options.Get("args", &args))
+      override_argv = true;
+  }
+
+  if (!override_argv) {
+#if defined(OS_WIN)
+    const relauncher::StringVector& argv = atom::AtomCommandLine::wargv();
+#else
+    const relauncher::StringVector& argv = atom::AtomCommandLine::argv();
+#endif
+    return relauncher::RelaunchApp(argv);
+  }
+
+  relauncher::StringVector argv;
+  argv.reserve(1 + args.size());
+
+  if (exec_path.empty()) {
+    base::FilePath current_exe_path;
+    PathService::Get(base::FILE_EXE, &current_exe_path);
+    argv.push_back(current_exe_path.value());
+  } else {
+    argv.push_back(exec_path.value());
+  }
+
+  argv.insert(argv.end(), args.begin(), args.end());
+
+  return relauncher::RelaunchApp(argv);
+}
+
+void App::DisableHardwareAcceleration(mate::Arguments* args) {
+  if (Browser::Get()->is_ready()) {
+    args->ThrowError("app.disableHardwareAcceleration() can only be called "
+                     "before app is ready");
+    return;
+  }
+  content::GpuDataManager::GetInstance()->DisableHardwareAcceleration();
+}
+
+bool App::IsAccessibilitySupportEnabled() {
+  auto ax_state = content::BrowserAccessibilityState::GetInstance();
+  return ax_state->IsAccessibleBrowser();
+}
+
+#if defined(USE_NSS_CERTS)
+void App::ImportCertificate(
+    const base::DictionaryValue& options,
+    const net::CompletionCallback& callback) {
+  auto browser_context = AtomBrowserContext::From("", false);
+  if (!certificate_manager_model_) {
+    std::unique_ptr<base::DictionaryValue> copy = options.CreateDeepCopy();
+    CertificateManagerModel::Create(
+        browser_context.get(),
+        base::Bind(&App::OnCertificateManagerModelCreated,
+                   base::Unretained(this),
+                   base::Passed(&copy),
+                   callback));
+    return;
+  }
+
+  int rv = ImportIntoCertStore(certificate_manager_model_.get(), options);
+  callback.Run(rv);
+}
+
+void App::OnCertificateManagerModelCreated(
+    std::unique_ptr<base::DictionaryValue> options,
+    const net::CompletionCallback& callback,
+    std::unique_ptr<CertificateManagerModel> model) {
+  certificate_manager_model_ = std::move(model);
+  int rv = ImportIntoCertStore(certificate_manager_model_.get(),
+                               *(options.get()));
+  callback.Run(rv);
+}
+#endif
+
+#if defined(OS_WIN)
+v8::Local<v8::Value> App::GetJumpListSettings() {
+  JumpList jump_list(Browser::Get()->GetAppUserModelID());
+
+  int min_items = 10;
+  std::vector<JumpListItem> removed_items;
+  if (jump_list.Begin(&min_items, &removed_items)) {
+    // We don't actually want to change anything, so abort the transaction.
+    jump_list.Abort();
+  } else {
+    LOG(ERROR) << "Failed to begin Jump List transaction.";
+  }
+
+  auto dict = mate::Dictionary::CreateEmpty(isolate());
+  dict.Set("minItems", min_items);
+  dict.Set("removedItems", mate::ConvertToV8(isolate(), removed_items));
+  return dict.GetHandle();
+}
+
+JumpListResult App::SetJumpList(v8::Local<v8::Value> val,
+                                mate::Arguments* args) {
+  std::vector<JumpListCategory> categories;
+  bool delete_jump_list = val->IsNull();
+  if (!delete_jump_list &&
+    !mate::ConvertFromV8(args->isolate(), val, &categories)) {
+    args->ThrowError("Argument must be null or an array of categories");
+    return JumpListResult::ARGUMENT_ERROR;
+  }
+
+  JumpList jump_list(Browser::Get()->GetAppUserModelID());
+
+  if (delete_jump_list) {
+    return jump_list.Delete()
+      ? JumpListResult::SUCCESS
+      : JumpListResult::GENERIC_ERROR;
+  }
+
+  // Start a transaction that updates the JumpList of this application.
+  if (!jump_list.Begin())
+    return JumpListResult::GENERIC_ERROR;
+
+  JumpListResult result = jump_list.AppendCategories(categories);
+  // AppendCategories may have failed to add some categories, but it's better
+  // to have something than nothing so try to commit the changes anyway.
+  if (!jump_list.Commit()) {
+    LOG(ERROR) << "Failed to commit changes to custom Jump List.";
+    // It's more useful to return the earlier error code that might give
+    // some indication as to why the transaction actually failed, so don't
+    // overwrite it with a "generic error" code here.
+    if (result == JumpListResult::SUCCESS)
+      result = JumpListResult::GENERIC_ERROR;
+  }
+
+  return result;
+}
+#endif  // defined(OS_WIN)
+
+// static
+mate::Handle<App> App::Create(v8::Isolate* isolate) {
+  return mate::CreateHandle(isolate, new App(isolate));
+}
+
+// static
+void App::BuildPrototype(
+    v8::Isolate* isolate, v8::Local<v8::FunctionTemplate> prototype) {
+  prototype->SetClassName(mate::StringToV8(isolate, "App"));
   auto browser = base::Unretained(Browser::Get());
-  return mate::ObjectTemplateBuilder(isolate)
+  mate::ObjectTemplateBuilder(isolate, prototype->PrototypeTemplate())
       .SetMethod("quit", base::Bind(&Browser::Quit, browser))
       .SetMethod("exit", base::Bind(&Browser::Exit, browser))
       .SetMethod("focus", base::Bind(&Browser::Focus, browser))
@@ -368,27 +831,51 @@ mate::ObjectTemplateBuilder App::GetObjectTemplateBuilder(
                  base::Bind(&Browser::ClearRecentDocuments, browser))
       .SetMethod("setAppUserModelId",
                  base::Bind(&Browser::SetAppUserModelID, browser))
+      .SetMethod("isDefaultProtocolClient",
+                 base::Bind(&Browser::IsDefaultProtocolClient, browser))
+      .SetMethod("setAsDefaultProtocolClient",
+                 base::Bind(&Browser::SetAsDefaultProtocolClient, browser))
+      .SetMethod("removeAsDefaultProtocolClient",
+                 base::Bind(&Browser::RemoveAsDefaultProtocolClient, browser))
+      .SetMethod("setBadgeCount", base::Bind(&Browser::SetBadgeCount, browser))
+      .SetMethod("getBadgeCount", base::Bind(&Browser::GetBadgeCount, browser))
+      .SetMethod("getLoginItemSettings",
+                 base::Bind(&Browser::GetLoginItemSettings, browser))
+      .SetMethod("setLoginItemSettings",
+                 base::Bind(&Browser::SetLoginItemSettings, browser))
 #if defined(OS_MACOSX)
       .SetMethod("hide", base::Bind(&Browser::Hide, browser))
       .SetMethod("show", base::Bind(&Browser::Show, browser))
+      .SetMethod("setUserActivity",
+                 base::Bind(&Browser::SetUserActivity, browser))
+      .SetMethod("getCurrentActivityType",
+                 base::Bind(&Browser::GetCurrentActivityType, browser))
+      .SetMethod("setAboutPanelOptions",
+                 base::Bind(&Browser::SetAboutPanelOptions, browser))
 #endif
 #if defined(OS_WIN)
-      .SetMethod("setUserTasks",
-                 base::Bind(&Browser::SetUserTasks, browser))
-      .SetMethod("isAeroGlassEnabled", &App::IsAeroGlassEnabled)
+      .SetMethod("setUserTasks", base::Bind(&Browser::SetUserTasks, browser))
+      .SetMethod("getJumpListSettings", &App::GetJumpListSettings)
+      .SetMethod("setJumpList", &App::SetJumpList)
+#endif
+#if defined(OS_LINUX)
+      .SetMethod("isUnityRunning",
+                 base::Bind(&Browser::IsUnityRunning, browser))
 #endif
       .SetMethod("setPath", &App::SetPath)
       .SetMethod("getPath", &App::GetPath)
       .SetMethod("setDesktopName", &App::SetDesktopName)
-      .SetMethod("allowNTLMCredentialsForAllDomains",
-                 &App::AllowNTLMCredentialsForAllDomains)
       .SetMethod("getLocale", &App::GetLocale)
-      .SetMethod("makeSingleInstance", &App::MakeSingleInstance);
-}
-
-// static
-mate::Handle<App> App::Create(v8::Isolate* isolate) {
-  return CreateHandle(isolate, new App);
+#if defined(USE_NSS_CERTS)
+      .SetMethod("importCertificate", &App::ImportCertificate)
+#endif
+      .SetMethod("makeSingleInstance", &App::MakeSingleInstance)
+      .SetMethod("releaseSingleInstance", &App::ReleaseSingleInstance)
+      .SetMethod("relaunch", &App::Relaunch)
+      .SetMethod("isAccessibilitySupportEnabled",
+                 &App::IsAccessibilitySupportEnabled)
+      .SetMethod("disableHardwareAcceleration",
+                 &App::DisableHardwareAcceleration);
 }
 
 }  // namespace api
@@ -401,8 +888,8 @@ namespace {
 void AppendSwitch(const std::string& switch_string, mate::Arguments* args) {
   auto command_line = base::CommandLine::ForCurrentProcess();
 
-  if (switch_string == atom::switches::kPpapiFlashPath ||
-      switch_string == atom::switches::kClientCertificate ||
+  if (base::EndsWith(switch_string, "-path",
+                     base::CompareCase::INSENSITIVE_ASCII) ||
       switch_string == switches::kLogNetLog) {
     base::FilePath path;
     args->GetNext(&path);
@@ -438,6 +925,7 @@ void Initialize(v8::Local<v8::Object> exports, v8::Local<v8::Value> unused,
   auto command_line = base::CommandLine::ForCurrentProcess();
 
   mate::Dictionary dict(isolate, exports);
+  dict.Set("App", atom::api::App::GetConstructor(isolate)->GetFunction());
   dict.Set("app", atom::api::App::Create(isolate));
   dict.SetMethod("appendSwitch", &AppendSwitch);
   dict.SetMethod("appendArgument",
@@ -448,12 +936,15 @@ void Initialize(v8::Local<v8::Object> exports, v8::Local<v8::Value> unused,
   dict.SetMethod("dockBounce", &DockBounce);
   dict.SetMethod("dockCancelBounce",
                  base::Bind(&Browser::DockCancelBounce, browser));
+  dict.SetMethod("dockDownloadFinished",
+                 base::Bind(&Browser::DockDownloadFinished, browser));
   dict.SetMethod("dockSetBadgeText",
                  base::Bind(&Browser::DockSetBadgeText, browser));
   dict.SetMethod("dockGetBadgeText",
                  base::Bind(&Browser::DockGetBadgeText, browser));
   dict.SetMethod("dockHide", base::Bind(&Browser::DockHide, browser));
   dict.SetMethod("dockShow", base::Bind(&Browser::DockShow, browser));
+  dict.SetMethod("dockIsVisible", base::Bind(&Browser::DockIsVisible, browser));
   dict.SetMethod("dockSetMenu", &DockSetMenu);
   dict.SetMethod("dockSetIcon", base::Bind(&Browser::DockSetIcon, browser));
 #endif

@@ -6,7 +6,46 @@
 
 Electronで `chromedriver` を使用するために、Electronがどこにあるかを示し、ElectronはChromeブラウザーであると思わせます。
 
-## WebDriverJsを設定します
+## Spectronの設定
+
+[Spectron][spectron]はElectronのための公式なChromeDriverテストフレームワークです。
+[WebdriverIO](http://webdriver.io/)に基づいてビルドされており、テストの中でElectron APIを使用するヘルパーやChromeDriveを持っています。
+
+```bash
+$ npm install --save-dev spectron
+```
+
+```javascript
+// 可視のウィンドウがタイトル付きで開かれているかを調べる簡単なテスト
+var Application = require('spectron').Application
+var assert = require('assert')
+
+var app = new Application({
+  path: '/Applications/MyApp.app/Contents/MacOS/MyApp'
+})
+
+app.start().then(function () {
+  // ウィンドウは表示されている？
+  return app.browserWindow.isVisible()
+}).then(function (isVisible) {
+  // ウィンドウが表示されているか確認
+  assert.equal(isVisible, true)
+}).then(function () {
+  // ウィンドウのタイトルを取得
+  return app.client.getTitle()
+}).then(function (title) {
+  // ウィンドウのタイトルを確認
+  assert.equal(title, 'My App')
+}).then(function () {
+  // アプリケーションを止める
+  return app.stop()
+}).catch(function (error) {
+  // 失敗した場合ログを残す
+  console.error('Test failed', error.message)
+})
+```
+
+## WebDriverJsを設定
 
 [WebDriverJs](https://code.google.com/p/selenium/wiki/WebDriverJs) は、web driver でテストするためのNodeパッケージを提供します。例のように使用します。
 
@@ -33,30 +72,30 @@ $ npm install selenium-webdriver
 Electronでの `selenium-webdriver` 使用方法は、chrome driverへの接続方法とElectronバイナリがどこにあるかをマニュアルで指定する以外は、upstreamと基本的に同じです。
 
 ```javascript
-const webdriver = require('selenium-webdriver');
+const webdriver = require('selenium-webdriver')
 
-var driver = new webdriver.Builder()
+const driver = new webdriver.Builder()
   // The "9515" is the port opened by chrome driver.
   .usingServer('http://localhost:9515')
   .withCapabilities({
     chromeOptions: {
       // Here is the path to your Electron binary.
-      binary: '/Path-to-Your-App.app/Contents/MacOS/Electron',
+      binary: '/Path-to-Your-App.app/Contents/MacOS/Electron'
     }
   })
   .forBrowser('electron')
-  .build();
+  .build()
 
-driver.get('http://www.google.com');
-driver.findElement(webdriver.By.name('q')).sendKeys('webdriver');
-driver.findElement(webdriver.By.name('btnG')).click();
-driver.wait(function() {
- return driver.getTitle().then(function(title) {
-   return title === 'webdriver - Google Search';
- });
-}, 1000);
+driver.get('http://www.google.com')
+driver.findElement(webdriver.By.name('q')).sendKeys('webdriver')
+driver.findElement(webdriver.By.name('btnG')).click()
+driver.wait(function () {
+  return driver.getTitle().then(function (title) {
+    return title === 'webdriver - Google Search'
+  })
+}, 1000)
 
-driver.quit();
+driver.quit()
 ```
 
 ## WebdriverIOのセットアップをする
@@ -84,36 +123,37 @@ $ npm install webdriverio
 ### 3. chrome driverに接続する
 
 ```javascript
-const webdriverio = require('webdriverio');
-var options = {
-    host: "localhost", // Use localhost as chrome driver server
-    port: 9515,        // "9515" is the port opened by chrome driver.
-    desiredCapabilities: {
-        browserName: 'chrome',
-        chromeOptions: {
-          binary: '/Path-to-Your-App/electron', // Path to your Electron binary.
-          args: [/* cli arguments */]           // Optional, perhaps 'app=' + /path/to/your/app/
-        }
+const webdriverio = require('webdriverio')
+const options = {
+  host: 'localhost', // Use localhost as chrome driver server
+  port: 9515,        // "9515" is the port opened by chrome driver.
+  desiredCapabilities: {
+    browserName: 'chrome',
+    chromeOptions: {
+      binary: '/Path-to-Your-App/electron', // Path to your Electron binary.
+      args: [/* cli arguments */]           // Optional, perhaps 'app=' + /path/to/your/app/
     }
-};
+  }
+}
 
-var client = webdriverio.remote(options);
+let client = webdriverio.remote(options)
 
 client
     .init()
     .url('http://google.com')
     .setValue('#q', 'webdriverio')
     .click('#btnG')
-    .getTitle().then(function(title) {
-        console.log('Title was: ' + title);
+    .getTitle().then((title) => {
+      console.log('Title was: ' + title)
     })
-    .end();
+    .end()
 ```
 
 ## ワークフロー
 
-Electronはリビルドせずにアプリケーションをテストするために、単純にElectronのリソースディレクトリでアプリのソースを[配置します](https://github.com/atom/electron/blob/master/docs/tutorial/application-distribution.md)。
+Electronはリビルドせずにアプリケーションをテストするために、単純にElectronのリソースディレクトリでアプリのソースを[配置します](https://github.com/electron/electron/blob/master/docs/tutorial/application-distribution.md)。
 
-もしくは、アプリのフォルダーを引数にしてElectronバイナリを実行します。これは、Electronのリソースディレクトリにアプリをコピー＆ペーストする必要性を除きます。
+もしくは、アプリのフォルダーを引数にしてElectronバイナリを実行します。これによって、Electronのリソースディレクトリにアプリをコピー＆ペーストする必要がなくなります。
 
 [chrome-driver]: https://sites.google.com/a/chromium.org/chromedriver/
+[spectron]: http://electron.atom.io/spectron

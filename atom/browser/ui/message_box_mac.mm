@@ -79,7 +79,7 @@ NSAlert* CreateNSAlert(NativeWindow* parent_window,
 
   for (size_t i = 0; i < buttons.size(); ++i) {
     NSString* title = base::SysUTF8ToNSString(buttons[i]);
-    // An empty title causes crash on OS X.
+    // An empty title causes crash on macOS.
     if (buttons[i].empty())
       title = @"(empty)";
     NSButton* button = [alert addButtonWithTitle:title];
@@ -96,7 +96,7 @@ NSAlert* CreateNSAlert(NativeWindow* parent_window,
   }
 
   if (!icon.isNull()) {
-    NSImage* image = gfx::SkBitmapToNSImageWithColorSpace(
+    NSImage* image = skia::SkBitmapToNSImageWithColorSpace(
         *icon.bitmap(), base::mac::GetGenericRGBColorSpace());
     [alert setIcon:image];
   }

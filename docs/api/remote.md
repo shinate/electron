@@ -1,5 +1,7 @@
 # remote
 
+> Use main process modules from the renderer process.
+
 The `remote` module provides a simple way to do inter-process communication
 (IPC) between the renderer process (web page) and the main process.
 
@@ -12,15 +14,13 @@ similar to Java's [RMI][rmi]. An example of creating a browser window from a
 renderer process:
 
 ```javascript
-const remote = require('electron').remote;
-const BrowserWindow = remote.BrowserWindow;
-
-var win = new BrowserWindow({ width: 800, height: 600 });
-win.loadURL('https://github.com');
+const {BrowserWindow} = require('electron').remote
+let win = new BrowserWindow({width: 800, height: 600})
+win.loadURL('https://github.com')
 ```
 
-**Note:** for the reverse (access the renderer process from the main process),
-you can use [webContents.executeJavascript](web-contents.md#webcontentsexecutejavascriptcode-usergesture).
+**Note:** For the reverse (access the renderer process from the main process),
+you can use [webContents.executeJavascript](web-contents.md#contentsexecutejavascriptcode-usergesture-callback).
 
 ## Remote Objects
 
@@ -36,7 +36,12 @@ process. Instead, it created a `BrowserWindow` object in the main process and
 returned the corresponding remote object in the renderer process, namely the
 `win` object.
 
-Please note that only [enumerable properties](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Enumerability_and_ownership_of_properties) are accessible via remote.
+**Note:** Only [enumerable properties][enumerable-properties] which are present
+when the remote object is first referenced are accessible via remote.
+
+**Note:** Arrays and Buffers are copied over IPC when accessed via the `remote`
+module. Modifying them in the renderer process does not modify them in the main
+process and vice versa.
 
 ## Lifetime of Remote Objects
 
@@ -67,28 +72,23 @@ For instance you can't use a function from the renderer process in an
 
 ```javascript
 // main process mapNumbers.js
-exports.withRendererCallback = function(mapper) {
-  return [1,2,3].map(mapper);
+exports.withRendererCallback = (mapper) => {
+  return [1, 2, 3].map(mapper)
 }
 
-exports.withLocalCallback = function() {
-  return exports.mapNumbers(function(x) {
-    return x + 1;
-  });
+exports.withLocalCallback = () => {
+  return [1, 2, 3].map(x => x + 1)
 }
 ```
 
 ```javascript
 // renderer process
-var mapNumbers = require("remote").require("./mapNumbers");
+const mapNumbers = require('electron').remote.require('./mapNumbers')
+const withRendererCb = mapNumbers.withRendererCallback(x => x + 1)
+const withLocalCb = mapNumbers.withLocalCallback()
 
-var withRendererCb = mapNumbers.withRendererCallback(function(x) {
-  return x + 1;
-})
-
-var withLocalCb = mapNumbers.withLocalCallback()
-
-console.log(withRendererCb, withLocalCb) // [true, true, true], [2, 3, 4]
+console.log(withRendererCb, withLocalCb)
+// [undefined, undefined, undefined], [2, 3, 4]
 ```
 
 As you can see, the renderer callback's synchronous return value was not as
@@ -102,9 +102,9 @@ For example, the following code seems innocent at first glance. It installs a
 callback for the `close` event on a remote object:
 
 ```javascript
-remote.getCurrentWindow().on('close', function() {
-  // blabla...
-});
+require('electron').remote.getCurrentWindow().on('close', () => {
+  // window was closed...
+})
 ```
 
 But remember the callback is referenced by the main process until you
@@ -126,7 +126,8 @@ The built-in modules in the main process are added as getters in the `remote`
 module, so you can use them directly like the `electron` module.
 
 ```javascript
-const app = remote.app;
+const app = require('electron').remote.app
+console.log(app)
 ```
 
 ## Methods
@@ -137,27 +138,30 @@ The `remote` module has the following methods:
 
 * `module` String
 
-Returns the object returned by `require(module)` in the main process.
+Returns `Object` - The object returned by `require(module)` in the main process.
 
 ### `remote.getCurrentWindow()`
 
-Returns the [`BrowserWindow`](browser-window.md) object to which this web page
+Returns `BrowserWindow` - The [`BrowserWindow`](browser-window.md) object to which this web page
 belongs.
 
 ### `remote.getCurrentWebContents()`
 
-Returns the [`WebContents`](web-contents.md) object of this web page.
+Returns `WebContents` - The [`WebContents`](web-contents.md) object of this web page.
 
 ### `remote.getGlobal(name)`
 
 * `name` String
 
-Returns the global variable of `name` (e.g. `global[name]`) in the main
+Returns `any` - The global variable of `name` (e.g. `global[name]`) in the main
 process.
+
+## Properties
 
 ### `remote.process`
 
-Returns the `process` object in the main process. This is the same as
+The `process` object in the main process. This is the same as
 `remote.getGlobal('process')` but is cached.
 
 [rmi]: http://en.wikipedia.org/wiki/Java_remote_method_invocation
+[enumerable-properties]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Enumerability_and_ownership_of_properties

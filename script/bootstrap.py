@@ -7,17 +7,14 @@ import sys
 
 from lib.config import LIBCHROMIUMCONTENT_COMMIT, BASE_URL, PLATFORM, \
                        enable_verbose_mode, is_verbose_mode, get_target_arch
-from lib.util import execute_stdout, get_atom_shell_version, scoped_cwd
+from lib.util import execute_stdout, get_electron_version, scoped_cwd
 
 
 SOURCE_ROOT = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 VENDOR_DIR = os.path.join(SOURCE_ROOT, 'vendor')
 PYTHON_26_URL = 'https://chromium.googlesource.com/chromium/deps/python_26'
 
-if os.environ.has_key('CI'):
-  NPM = os.path.join(SOURCE_ROOT, 'node_modules', '.bin', 'npm')
-else:
-  NPM = 'npm'
+NPM = 'npm'
 if sys.platform in ['win32', 'cygwin']:
   NPM += '.cmd'
 
@@ -26,6 +23,7 @@ def main():
   os.chdir(SOURCE_ROOT)
 
   args = parse_args()
+  defines = args_to_defines(args)
   if not args.yes and PLATFORM != 'win32':
     check_root()
   if args.verbose:
@@ -33,22 +31,38 @@ def main():
   if sys.platform == 'cygwin':
     update_win32_python()
 
-  if PLATFORM != 'win32':
-    update_clang()
-
   update_submodules()
+
+  libcc_source_path = args.libcc_source_path
+  libcc_shared_library_path = args.libcc_shared_library_path
+  libcc_static_library_path = args.libcc_static_library_path
+
+  # Redirect to use local libchromiumcontent build.
+  if args.build_libchromiumcontent:
+    build_libchromiumcontent(args.verbose, args.target_arch, defines)
+    dist_dir = os.path.join(SOURCE_ROOT, 'vendor', 'brightray', 'vendor',
+                            'libchromiumcontent', 'dist', 'main')
+    libcc_source_path = os.path.join(dist_dir, 'src')
+    libcc_shared_library_path = os.path.join(dist_dir, 'shared_library')
+    libcc_static_library_path = os.path.join(dist_dir, 'static_library')
+
+  if PLATFORM != 'win32':
+    if not args.disable_clang and args.clang_dir == '':
+      # Download prebuilt clang binaries.
+      update_clang()
+
   setup_python_libs()
   update_node_modules('.')
   bootstrap_brightray(args.dev, args.url, args.target_arch,
-                      args.libcc_source_path, args.libcc_shared_library_path,
-                      args.libcc_static_library_path)
+                      libcc_source_path, libcc_shared_library_path,
+                      libcc_static_library_path)
 
-  if args.target_arch in ['arm', 'ia32'] and PLATFORM == 'linux':
+  if PLATFORM == 'linux':
     download_sysroot(args.target_arch)
 
   create_chrome_version_h()
   touch_config_gypi()
-  run_update()
+  run_update(defines, args.msvs)
   update_electron_modules('spec', args.target_arch)
 
 
@@ -69,8 +83,15 @@ def parse_args():
                       action='store_true',
                       help='Run non-interactively by assuming "yes" to all ' \
                            'prompts.')
+  parser.add_argument('--msvs', action='store_true',
+                      help='Generate Visual Studio project')
   parser.add_argument('--target_arch', default=get_target_arch(),
                       help='Manually specify the arch to build for')
+  parser.add_argument('--clang_dir', default='', help='Path to clang binaries')
+  parser.add_argument('--disable_clang', action='store_true',
+                      help='Use compilers other than clang for building')
+  parser.add_argument('--build_libchromiumcontent', action='store_true',
+                      help='Build local version of libchromiumcontent')
   parser.add_argument('--libcc_source_path', required=False,
                       help='The source path of libchromiumcontent. ' \
                            'NOTE: All options of libchromiumcontent are ' \
@@ -79,7 +100,19 @@ def parse_args():
                       help='The shared library path of libchromiumcontent.')
   parser.add_argument('--libcc_static_library_path', required=False,
                       help='The static library path of libchromiumcontent.')
+  parser.add_argument('--defines', default='',
+                      help='The build variables passed to gyp')
   return parser.parse_args()
+
+
+def args_to_defines(args):
+  defines = args.defines
+  if args.disable_clang:
+    defines += ' clang=0'
+  if args.clang_dir:
+    defines += ' make_clang_dir=' + args.clang_dir
+    defines += ' clang_use_chrome_plugins=0'
+  return defines
 
 
 def check_root():
@@ -91,7 +124,7 @@ def check_root():
 
 
 def update_submodules():
-  execute_stdout(['git', 'submodule', 'sync'])
+  execute_stdout(['git', 'submodule', 'sync', '--recursive'])
   execute_stdout(['git', 'submodule', 'update', '--init', '--recursive'])
 
 
@@ -121,15 +154,19 @@ def bootstrap_brightray(is_dev, url, target_arch, libcc_source_path,
   execute_stdout([sys.executable, bootstrap] + args)
 
 
+def set_clang_env(env):
+  llvm_dir = os.path.join(SOURCE_ROOT, 'vendor', 'llvm-build',
+                          'Release+Asserts', 'bin')
+  env['CC']  = os.path.join(llvm_dir, 'clang')
+  env['CXX'] = os.path.join(llvm_dir, 'clang++')
+
+
 def update_node_modules(dirname, env=None):
   if env is None:
-    env = os.environ
+    env = os.environ.copy()
   if PLATFORM == 'linux':
     # Use prebuilt clang for building native modules.
-    llvm_dir = os.path.join(SOURCE_ROOT, 'vendor', 'llvm-build',
-                            'Release+Asserts', 'bin')
-    env['CC']  = os.path.join(llvm_dir, 'clang')
-    env['CXX'] = os.path.join(llvm_dir, 'clang++')
+    set_clang_env(env)
     env['npm_config_clang'] = '1'
   with scoped_cwd(dirname):
     args = [NPM, 'install']
@@ -148,7 +185,7 @@ def update_node_modules(dirname, env=None):
 def update_electron_modules(dirname, target_arch):
   env = os.environ.copy()
   env['npm_config_arch']    = target_arch
-  env['npm_config_target']  = get_atom_shell_version()
+  env['npm_config_target']  = get_electron_version()
   env['npm_config_disturl'] = 'https://atom.io/download/atom-shell'
   update_node_modules(dirname, env)
 
@@ -159,6 +196,16 @@ def update_win32_python():
       execute_stdout(['git', 'clone', PYTHON_26_URL])
 
 
+def build_libchromiumcontent(verbose, target_arch, defines):
+  args = [sys.executable,
+          os.path.join(SOURCE_ROOT, 'script', 'build-libchromiumcontent.py')]
+  if verbose:
+    args += ['-v']
+  if defines:
+    args += ['--defines', defines]
+  execute_stdout(args + ['--target_arch', target_arch])
+
+
 def update_clang():
   execute_stdout([os.path.join(SOURCE_ROOT, 'script', 'update-clang.sh')])
 
@@ -166,9 +213,11 @@ def update_clang():
 def download_sysroot(target_arch):
   if target_arch == 'ia32':
     target_arch = 'i386'
-  execute_stdout([os.path.join(SOURCE_ROOT, 'script', 'install-sysroot.py'),
+  if target_arch == 'x64':
+    target_arch = 'amd64'
+  execute_stdout([sys.executable,
+                  os.path.join(SOURCE_ROOT, 'script', 'install-sysroot.py'),
                   '--arch', target_arch])
-
 
 def create_chrome_version_h():
   version_file = os.path.join(SOURCE_ROOT, 'vendor', 'brightray', 'vendor',
@@ -201,9 +250,14 @@ def touch_config_gypi():
       f.write(content)
 
 
-def run_update():
-  update = os.path.join(SOURCE_ROOT, 'script', 'update.py')
-  execute_stdout([sys.executable, update])
+def run_update(defines, msvs):
+  args = [sys.executable, os.path.join(SOURCE_ROOT, 'script', 'update.py')]
+  if defines:
+    args += ['--defines', defines]
+  if msvs:
+    args += ['--msvs']
+
+  execute_stdout(args)
 
 
 if __name__ == '__main__':

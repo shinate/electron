@@ -66,7 +66,7 @@ const char kType[] = "type";
 // Disable auto-hiding cursor.
 const char kDisableAutoHideCursor[] = "disableAutoHideCursor";
 
-// Use the OS X's standard window instead of the textured window.
+// Use the macOS' standard window instead of the textured window.
 const char kStandardWindow[] = "standardWindow";
 
 // Default browser window background color.
@@ -74,6 +74,9 @@ const char kBackgroundColor[] = "backgroundColor";
 
 // Whether the window should have a shadow.
 const char kHasShadow[] = "hasShadow";
+
+// Whether the window can be activated.
+const char kFocusable[] = "focusable";
 
 // The WebPreferences.
 const char kWebPreferences[] = "webPreferences";
@@ -93,9 +96,6 @@ const char kNodeIntegration[] = "nodeIntegration";
 // Instancd ID of guest WebContents.
 const char kGuestInstanceID[] = "guestInstanceId";
 
-// Enable DirectWrite on Windows.
-const char kDirectWrite[] = "directWrite";
-
 // Web runtime features.
 const char kExperimentalFeatures[]       = "experimentalFeatures";
 const char kExperimentalCanvasFeatures[] = "experimentalCanvasFeatures";
@@ -103,12 +103,22 @@ const char kExperimentalCanvasFeatures[] = "experimentalCanvasFeatures";
 // Opener window's ID.
 const char kOpenerID[] = "openerId";
 
+// Enable the rubber banding effect.
+const char kScrollBounce[] = "scrollBounce";
+
 // Enable blink features.
+// TODO(kevinsawicki) Rename to enableBlinkFeatures in 2.0
 const char kBlinkFeatures[] = "blinkFeatures";
+
+// Disable blink features.
+const char kDisableBlinkFeatures[] = "disableBlinkFeatures";
 
 }  // namespace options
 
 namespace switches {
+
+// Enable chromium sandbox.
+const char kEnableSandbox[] = "enable-sandbox";
 
 // Enable plugins.
 const char kEnablePlugins[] = "enable-plugins";
@@ -119,14 +129,11 @@ const char kPpapiFlashPath[] = "ppapi-flash-path";
 // Ppapi Flash version.
 const char kPpapiFlashVersion[] = "ppapi-flash-version";
 
-// Path to client certificate.
-const char kClientCertificate[] = "client-certificate";
-
 // Disable HTTP cache.
 const char kDisableHttpCache[] = "disable-http-cache";
 
-// Register schemes to standard.
-const char kRegisterStandardSchemes[] = "register-standard-schemes";
+// The list of standard schemes.
+const char kStandardSchemes[] = "standard-schemes";
 
 // Register schemes to handle service worker.
 const char kRegisterServiceWorkerSchemes[] = "register-service-worker-schemes";
@@ -142,12 +149,14 @@ const char kCipherSuiteBlacklist[] = "cipher-suite-blacklist";
 const char kAppUserModelId[] = "app-user-model-id";
 
 // The command line switch versions of the options.
-const char kZoomFactor[]                 = "zoom-factor";
-const char kPreloadScript[]              = "preload";
-const char kPreloadURL[]                 = "preload-url";
-const char kNodeIntegration[]            = "node-integration";
-const char kGuestInstanceID[]            = "guest-instance-id";
-const char kOpenerID[]                   = "opener-id";
+const char kBackgroundColor[] = "background-color";
+const char kZoomFactor[]      = "zoom-factor";
+const char kPreloadScript[]   = "preload";
+const char kPreloadURL[]      = "preload-url";
+const char kNodeIntegration[] = "node-integration";
+const char kGuestInstanceID[] = "guest-instance-id";
+const char kOpenerID[]        = "opener-id";
+const char kScrollBounce[]    = "scroll-bounce";
 
 // Widevine options
 // Path to Widevine CDM binaries.

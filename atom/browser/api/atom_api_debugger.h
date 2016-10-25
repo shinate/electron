@@ -39,11 +39,11 @@ class Debugger: public mate::TrackableObject<Debugger>,
 
   // mate::TrackableObject:
   static void BuildPrototype(v8::Isolate* isolate,
-                             v8::Local<v8::ObjectTemplate> prototype);
+                             v8::Local<v8::FunctionTemplate> prototype);
 
  protected:
-  explicit Debugger(content::WebContents* web_contents);
-  ~Debugger();
+  Debugger(v8::Isolate* isolate, content::WebContents* web_contents);
+  ~Debugger() override;
 
   // content::DevToolsAgentHostClient:
   void AgentHostClosed(content::DevToolsAgentHost* agent_host,

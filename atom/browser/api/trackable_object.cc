@@ -29,21 +29,12 @@ class IDUserData : public base::SupportsUserData::Data {
 }  // namespace
 
 TrackableObjectBase::TrackableObjectBase()
-    : weak_map_id_(0), wrapped_(nullptr), weak_factory_(this) {
+    : weak_map_id_(0), weak_factory_(this) {
   cleanup_ = RegisterDestructionCallback(GetDestroyClosure());
 }
 
 TrackableObjectBase::~TrackableObjectBase() {
   cleanup_.Run();
-}
-
-void TrackableObjectBase::AfterInit(v8::Isolate* isolate) {
-  if (wrapped_)
-    AttachAsUserData(wrapped_);
-}
-
-void TrackableObjectBase::MarkDestroyed() {
-  GetWrapper(isolate())->SetAlignedPointerInInternalField(0, nullptr);
 }
 
 base::Closure TrackableObjectBase::GetDestroyClosure() {
@@ -55,14 +46,7 @@ void TrackableObjectBase::Destroy() {
 }
 
 void TrackableObjectBase::AttachAsUserData(base::SupportsUserData* wrapped) {
-  if (weak_map_id_ != 0) {
-    wrapped->SetUserData(kTrackedObjectKey, new IDUserData(weak_map_id_));
-    wrapped_ = nullptr;
-  } else {
-    // If the TrackableObjectBase is not ready yet then delay SetUserData until
-    // AfterInit is called.
-    wrapped_ = wrapped;
-  }
+  wrapped->SetUserData(kTrackedObjectKey, new IDUserData(weak_map_id_));
 }
 
 // static

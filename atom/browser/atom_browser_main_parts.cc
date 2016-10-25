@@ -15,8 +15,9 @@
 #include "atom/common/node_bindings.h"
 #include "atom/common/node_includes.h"
 #include "base/command_line.h"
-#include "base/thread_task_runner_handle.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "chrome/browser/browser_process.h"
+#include "content/public/browser/child_process_security_policy.h"
 #include "v8/include/v8-debug.h"
 
 #if defined(USE_X11)
@@ -32,7 +33,7 @@ void Erase(T* container, typename T::iterator iter) {
 }
 
 // static
-AtomBrowserMainParts* AtomBrowserMainParts::self_ = NULL;
+AtomBrowserMainParts* AtomBrowserMainParts::self_ = nullptr;
 
 AtomBrowserMainParts::AtomBrowserMainParts()
     : fake_browser_process_(new BrowserProcess),
@@ -43,9 +44,20 @@ AtomBrowserMainParts::AtomBrowserMainParts()
       gc_timer_(true, true) {
   DCHECK(!self_) << "Cannot have two AtomBrowserMainParts";
   self_ = this;
+  // Register extension scheme as web safe scheme.
+  content::ChildProcessSecurityPolicy::GetInstance()->
+      RegisterWebSafeScheme("chrome-extension");
 }
 
 AtomBrowserMainParts::~AtomBrowserMainParts() {
+  // Leak the JavascriptEnvironment on exit.
+  // This is to work around the bug that V8 would be waiting for background
+  // tasks to finish on exit, while somehow it waits forever in Electron, more
+  // about this can be found at https://github.com/electron/electron/issues/4767.
+  // On the other handle there is actually no need to gracefully shutdown V8
+  // on exit in the main process, we already ensured all necessary resources get
+  // cleaned up, and it would make quitting faster.
+  ignore_result(js_env_.release());
 }
 
 // static
@@ -98,20 +110,26 @@ void AtomBrowserMainParts::PostEarlyInitialization() {
   node_debugger_.reset(new NodeDebugger(js_env_->isolate()));
 
   // Create the global environment.
-  global_env = node_bindings_->CreateEnvironment(js_env_->context());
+  node::Environment* env =
+      node_bindings_->CreateEnvironment(js_env_->context());
 
   // Make sure node can get correct environment when debugging.
   if (node_debugger_->IsRunning())
-    global_env->AssignToContext(v8::Debug::GetDebugContext());
+    env->AssignToContext(v8::Debug::GetDebugContext());
 
-  // Add atom-shell extended APIs.
-  atom_bindings_->BindTo(js_env_->isolate(), global_env->process_object());
+  // Add Electron extended APIs.
+  atom_bindings_->BindTo(js_env_->isolate(), env->process_object());
 
   // Load everything.
-  node_bindings_->LoadEnvironment(global_env);
+  node_bindings_->LoadEnvironment(env);
+
+  // Wrap the uv loop with global env.
+  node_bindings_->set_uv_env(env);
 }
 
 void AtomBrowserMainParts::PreMainMessageLoopRun() {
+  js_env_->OnMessageLoopCreated();
+
   // Run user's main script before most things get initialized, so we can have
   // a chance to setup everything.
   node_bindings_->PrepareMessageLoop();
@@ -124,9 +142,8 @@ void AtomBrowserMainParts::PreMainMessageLoopRun() {
   // Start idle gc.
   gc_timer_.Start(
       FROM_HERE, base::TimeDelta::FromMinutes(1),
-      base::Bind(base::IgnoreResult(&v8::Isolate::IdleNotification),
-                 base::Unretained(js_env_->isolate()),
-                 1000));
+      base::Bind(&v8::Isolate::LowMemoryNotification,
+                 base::Unretained(js_env_->isolate())));
 
   brightray::BrowserMainParts::PreMainMessageLoopRun();
   bridge_task_runner_->MessageLoopIsReady();
@@ -137,9 +154,10 @@ void AtomBrowserMainParts::PreMainMessageLoopRun() {
 #endif
 
 #if !defined(OS_MACOSX)
-  // The corresponding call in OS X is in AtomApplicationDelegate.
+  // The corresponding call in macOS is in AtomApplicationDelegate.
   Browser::Get()->WillFinishLaunching();
-  Browser::Get()->DidFinishLaunching();
+  std::unique_ptr<base::DictionaryValue> empty_info(new base::DictionaryValue);
+  Browser::Get()->DidFinishLaunching(*empty_info);
 #endif
 }
 
@@ -158,6 +176,8 @@ void AtomBrowserMainParts::PostMainMessageLoopStart() {
 void AtomBrowserMainParts::PostMainMessageLoopRun() {
   brightray::BrowserMainParts::PostMainMessageLoopRun();
 
+  js_env_->OnMessageLoopDestroying();
+
 #if defined(OS_MACOSX)
   FreeAppDelegate();
 #endif
@@ -172,14 +192,6 @@ void AtomBrowserMainParts::PostMainMessageLoopRun() {
     ++iter;
     callback.Run();
   }
-
-  // Destroy JavaScript environment immediately after running destruction
-  // callbacks.
-  gc_timer_.Stop();
-  node_debugger_.reset();
-  atom_bindings_.reset();
-  node_bindings_.reset();
-  js_env_.reset();
 }
 
 }  // namespace atom

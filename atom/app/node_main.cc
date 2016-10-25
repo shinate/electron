@@ -8,11 +8,19 @@
 #include "atom/browser/javascript_environment.h"
 #include "atom/browser/node_debugger.h"
 #include "base/command_line.h"
-#include "atom/common/node_includes.h"
-#include "base/thread_task_runner_handle.h"
+#include "base/feature_list.h"
+#include "base/threading/thread_task_runner_handle.h"
 #include "gin/array_buffer.h"
 #include "gin/public/isolate_holder.h"
 #include "gin/v8_initializer.h"
+
+#if defined(OS_WIN)
+#include "atom/common/api/atom_bindings.h"
+#include "atom/common/native_mate_converters/string16_converter.h"
+#include "native_mate/dictionary.h"
+#endif
+
+#include "atom/common/node_includes.h"
 
 namespace atom {
 
@@ -26,6 +34,11 @@ int NodeMain(int argc, char *argv[]) {
     uv_loop_t* loop = uv_default_loop();
     scoped_refptr<UvTaskRunner> uv_task_runner(new UvTaskRunner(loop));
     base::ThreadTaskRunnerHandle handle(uv_task_runner);
+
+    // Initialize feature list.
+    std::unique_ptr<base::FeatureList> feature_list(new base::FeatureList);
+    feature_list->InitializeFromCommandLine("", "");
+    base::FeatureList::SetInstance(std::move(feature_list));
 
     gin::V8Initializer::LoadV8Snapshot();
     gin::V8Initializer::LoadV8Natives();
@@ -43,6 +56,11 @@ int NodeMain(int argc, char *argv[]) {
     NodeDebugger node_debugger(gin_env.isolate());
     if (node_debugger.IsRunning())
       env->AssignToContext(v8::Debug::GetDebugContext());
+
+#if defined(OS_WIN)
+    mate::Dictionary process(gin_env.isolate(), env->process_object());
+    process.SetMethod("log", &AtomBindings::Log);
+#endif
 
     node::LoadEnvironment(env);
 
@@ -63,7 +81,7 @@ int NodeMain(int argc, char *argv[]) {
     exit_code = node::EmitExit(env);
     node::RunAtExit(env);
 
-    env->Dispose();
+    node::FreeEnvironment(env);
   }
 
   v8::V8::Dispose();

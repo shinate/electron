@@ -3,23 +3,23 @@
 `Tray`は、オペレーティングシステムの通知エリアでアイコンで表示され、通常コンテキストメニューが付随します。
 
 ```javascript
-const electron = require('electron');
-const app = electron.app;
-const Menu = electron.Menu;
-const Tray = electron.Tray;
+const electron = require('electron')
+const app = electron.app
+const Menu = electron.Menu
+const Tray = electron.Tray
 
-var appIcon = null;
-app.on('ready', function(){
-  appIcon = new Tray('/path/to/my/icon');
+var appIcon = null
+app.on('ready', function () {
+  appIcon = new Tray('/path/to/my/icon')
   var contextMenu = Menu.buildFromTemplate([
     { label: 'Item1', type: 'radio' },
     { label: 'Item2', type: 'radio' },
     { label: 'Item3', type: 'radio', checked: true },
     { label: 'Item4', type: 'radio' }
-  ]);
-  appIcon.setToolTip('This is my application.');
-  appIcon.setContextMenu(contextMenu);
-});
+  ])
+  appIcon.setToolTip('This is my application.')
+  appIcon.setContextMenu(contextMenu)
+})
 
 ```
 
@@ -63,9 +63,9 @@ __プラットフォームの制限:__
 
 トレイアイコンがクリックされたときに出力されます。
 
-__Note:__  `バウンド` 再生はOS XとWindoesのみで実装されています。
+__Note:__  `バウンド` 再生はmacOSとWindoesのみで実装されています。
 
-### イベント: 'right-click' _OS X_ _Windows_
+### イベント: 'right-click' _macOS_ _Windows_
 
 * `event` Event
   * `altKey` Boolean
@@ -80,7 +80,7 @@ __Note:__  `バウンド` 再生はOS XとWindoesのみで実装されていま�
 
 トレイアイコンが右クリックされると出力されます。
 
-### イベント: 'double-click' _OS X_ _Windows_
+### イベント: 'double-click' _macOS_ _Windows_
 
 * `event` Event
   * `altKey` Boolean
@@ -107,26 +107,26 @@ __Note:__  `バウンド` 再生はOS XとWindoesのみで実装されていま�
 
 タイムアウトもしくはユーザーの操作で閉じて、トレイバルーンがクロースされたときに出力されます。
 
-### イベント: 'drop' _OS X_
+### イベント: 'drop' _macOS_
 
 トレイアイコンでアイテムがドラグアンドドロップされたときに出力されます。
 
-### イベント: 'drop-files' _OS X_
+### イベント: 'drop-files' _macOS_
 
 * `event`
 * `files` Array - ドロップされたアイテムのフルパス
 
 トレイアイコンでファイルがドロップされたときに出力されます。
 
-### イベント: 'drag-enter' _OS X_
+### イベント: 'drag-enter' _macOS_
 
 トレイアイコンにドラッグ操作が入ったときに出力されます。
 
-### イベント: 'drag-leave' _OS X_
+### イベント: 'drag-leave' _macOS_
 
 トレイアイコンででドラッグ操作が行われたときに出力されます。
 
-### イベント: 'drag-end' _OS X_
+### イベント: 'drag-end' _macOS_
 
 トレイ上でドラッグ操作が終了したか、ほかの場所で終了したときに出力されます。
 
@@ -146,11 +146,11 @@ __Note:__  `バウンド` 再生はOS XとWindoesのみで実装されていま�
 
 トレイアイコンの`image`を設定します。
 
-### `Tray.setPressedImage(image)` _OS X_
+### `Tray.setPressedImage(image)` _macOS_
 
 * `image` [NativeImage](native-image.md)
 
-OS Xで押されたときにトレイアイコンの`image`を設定します。
+macOSで押されたときにトレイアイコンの`image`を設定します。
 
 ### `Tray.setToolTip(toolTip)`
 
@@ -158,13 +158,13 @@ OS Xで押されたときにトレイアイコンの`image`を設定します。
 
 トレイアイコン用のホバーテキストを設定します。
 
-### `Tray.setTitle(title)` _OS X_
+### `Tray.setTitle(title)` _macOS_
 
 * `title` String
 
 ステータスバーで、トレイアイコンのわきに表示するタイトルを設定します。
 
-### `Tray.setHighlightMode(highlight)` _OS X_
+### `Tray.setHighlightMode(highlight)` _macOS_
 
 * `highlight` Boolean
 
@@ -179,7 +179,7 @@ OS Xで押されたときにトレイアイコンの`image`を設定します。
 
 トレイバルーンを表示します。
 
-### `Tray.popUpContextMenu([menu, position])` _OS X_ _Windows_
+### `Tray.popUpContextMenu([menu, position])` _macOS_ _Windows_
 
 * `menu` Menu (optional)
 * `position` Object (optional) - ポップアップ位置

@@ -4,12 +4,12 @@
 
 #include "atom/browser/api/atom_api_auto_updater.h"
 
-#include "base/time/time.h"
 #include "atom/browser/browser.h"
 #include "atom/browser/native_window.h"
 #include "atom/browser/window_list.h"
 #include "atom/common/native_mate_converters/callback.h"
 #include "atom/common/node_includes.h"
+#include "base/time/time.h"
 #include "native_mate/dictionary.h"
 #include "native_mate/object_template_builder.h"
 
@@ -34,8 +34,9 @@ namespace atom {
 
 namespace api {
 
-AutoUpdater::AutoUpdater() {
+AutoUpdater::AutoUpdater(v8::Isolate* isolate) {
   auto_updater::AutoUpdater::SetDelegate(this);
+  Init(isolate);
 }
 
 AutoUpdater::~AutoUpdater() {
@@ -78,12 +79,10 @@ void AutoUpdater::OnWindowAllClosed() {
   QuitAndInstall();
 }
 
-mate::ObjectTemplateBuilder AutoUpdater::GetObjectTemplateBuilder(
-    v8::Isolate* isolate) {
-  return mate::ObjectTemplateBuilder(isolate)
-      .SetMethod("setFeedURL", &auto_updater::AutoUpdater::SetFeedURL)
-      .SetMethod("checkForUpdates", &auto_updater::AutoUpdater::CheckForUpdates)
-      .SetMethod("quitAndInstall", &AutoUpdater::QuitAndInstall);
+void AutoUpdater::SetFeedURL(const std::string& url, mate::Arguments* args) {
+  auto_updater::AutoUpdater::HeaderMap headers;
+  args->GetNext(&headers);
+  auto_updater::AutoUpdater::SetFeedURL(url, headers);
 }
 
 void AutoUpdater::QuitAndInstall() {
@@ -102,7 +101,18 @@ void AutoUpdater::QuitAndInstall() {
 
 // static
 mate::Handle<AutoUpdater> AutoUpdater::Create(v8::Isolate* isolate) {
-  return CreateHandle(isolate, new AutoUpdater);
+  return mate::CreateHandle(isolate, new AutoUpdater(isolate));
+}
+
+// static
+void AutoUpdater::BuildPrototype(
+    v8::Isolate* isolate, v8::Local<v8::FunctionTemplate> prototype) {
+  prototype->SetClassName(mate::StringToV8(isolate, "AutoUpdater"));
+  mate::ObjectTemplateBuilder(isolate, prototype->PrototypeTemplate())
+      .SetMethod("checkForUpdates", &auto_updater::AutoUpdater::CheckForUpdates)
+      .SetMethod("getFeedURL", &auto_updater::AutoUpdater::GetFeedURL)
+      .SetMethod("setFeedURL", &AutoUpdater::SetFeedURL)
+      .SetMethod("quitAndInstall", &AutoUpdater::QuitAndInstall);
 }
 
 }  // namespace api
@@ -112,11 +122,14 @@ mate::Handle<AutoUpdater> AutoUpdater::Create(v8::Isolate* isolate) {
 
 namespace {
 
+using atom::api::AutoUpdater;
+
 void Initialize(v8::Local<v8::Object> exports, v8::Local<v8::Value> unused,
                 v8::Local<v8::Context> context, void* priv) {
   v8::Isolate* isolate = context->GetIsolate();
   mate::Dictionary dict(isolate, exports);
-  dict.Set("autoUpdater", atom::api::AutoUpdater::Create(isolate));
+  dict.Set("autoUpdater", AutoUpdater::Create(isolate));
+  dict.Set("AutoUpdater", AutoUpdater::GetConstructor(isolate)->GetFunction());
 }
 
 }  // namespace

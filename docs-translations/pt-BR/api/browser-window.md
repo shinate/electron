@@ -3,15 +3,15 @@
 A classe `BrowserWindow` lhe dá a habilidade de criar uma janela do browser. Por exemplo:
 
 ```javascript
-const BrowserWindow = require('electron').BrowserWindow;
+const BrowserWindow = require('electron').BrowserWindow
 
-var win = new BrowserWindow({ width: 800, height: 600, show: false });
-win.on('closed', function() {
-  win = null;
-});
+var win = new BrowserWindow({ width: 800, height: 600, show: false })
+win.on('closed', function () {
+  win = null
+})
 
-win.loadURL('https://github.com');
-win.show();
+win.loadURL('https://github.com')
+win.show()
 ```
 
 Você também pode criar uma janela sem o chrome utilizando a API [Frameless Window](../../../docs/api/frameless-window.md).
@@ -38,7 +38,7 @@ Ela cria uma nova `BrowserWindow` com propriedades nativas definidas pelo `optio
 * `maxHeight` Integer - Altura máxima da janela. O padrão é sem limites.
 * `resizable` Boolean - Se é possível modificar o tamanho da janela. O padrão é `true`.
 * `alwaysOnTop` Boolean - Se a janela deve sempre ficar à frente de outras janelas. O padrão é `false`.
-* `fullscreen` Boolean - Se a janela deve estar em tela cheia. Quando definido como `false`, o botão de tela cheia estará escondido ou desabilitado no OS X. O padrão é `false`.
+* `fullscreen` Boolean - Se a janela deve estar em tela cheia. Quando definido como `false`, o botão de tela cheia estará escondido ou desabilitado no macOS. O padrão é `false`.
 * `skipTaskbar` Boolean - Se deve mostrar a janela na barra de tarefas. O padrão é `false`.
 * `kiosk` Boolean - Modo *kiosk*. O padrão é `false`.
 * `title` String - Título padrão da janela. O padrão é `"Electron"`.
@@ -55,8 +55,8 @@ Ela cria uma nova `BrowserWindow` com propriedades nativas definidas pelo `optio
 * `type` String - Define o tipo da janela, que aplica propriedades adicionais específicas da plataforma. Por padrão é indefinido e será criada uma janela de aplicativo comum. Possíveis valores:
   * No Linux, os tipos possíveis são `desktop`, `dock`, `toolbar`, `splash`,
     `notification`.
-  * No OS X, os tipos possíveis são `desktop`, `textured`. O tipo `textured` adiciona a aparência degradê metálica (`NSTexturedBackgroundWindowMask`). O tipo  `desktop` coloca a janela no nível do fundo de tela do desktop (`kCGDesktopWindowLevel - 1`). Note que a janela `desktop` não irá receber foco, eventos de teclado ou mouse, mas você pode usar `globalShortcut` para receber entrada de dados ocasionalmente.
-* `titleBarStyle` String, OS X - Define o estilo da barra de título da janela. Esta opção está suportada a partir da versão OS X 10.10 Yosemite. Há três possíveis valores:
+  * No macOS, os tipos possíveis são `desktop`, `textured`. O tipo `textured` adiciona a aparência degradê metálica (`NSTexturedBackgroundWindowMask`). O tipo  `desktop` coloca a janela no nível do fundo de tela do desktop (`kCGDesktopWindowLevel - 1`). Note que a janela `desktop` não irá receber foco, eventos de teclado ou mouse, mas você pode usar `globalShortcut` para receber entrada de dados ocasionalmente.
+* `titleBarStyle` String, macOS - Define o estilo da barra de título da janela. Esta opção está suportada a partir da versão macOS 10.10 Yosemite. Há três possíveis valores:
   * `default` ou não definido, resulta na barra de título cinza opaca padrão do Mac.
   * `hidden` resulta numa barra de título oculta e a janela de conteúdo no tamanho máximo, porém a barra de título ainda possui os controles padrões de janela ("semáforo") no canto superior esquerdo.
   * `hidden-inset` resulta numa barra de título oculta com uma aparência alternativa onde os botões de semáforo estão ligeiramente mais longe do canto da janela.
@@ -109,16 +109,16 @@ Emitido quando a janela for fechar. É emitido antes dos eventos `beforeunload` 
 Normalmente você utiliza o manipulador de eventos do `beforeunload` para decidir se a janela deve ser fechada, que também será chamado quando a janela é recarregada. No Electron, retornar uma string vazia ou `false` cancela o fechamento. Por exemplo:
 
 ```javascript
-window.onbeforeunload = function(e) {
-  console.log('Não quero ser fechada');
+window.onbeforeunload = function (e) {
+  console.log('Não quero ser fechada')
 
-  // Diferente de navegadores comuns, nos quais uma string deve ser retornada e 
+  // Diferente de navegadores comuns, nos quais uma string deve ser retornada e
   // o usuário deve confirmar se a janela será fechada, o Electron dá mais opções
   // aos desenvolvedores. Retornar uma string vazia ou false cancela o fechamento.
-  // Você também pode usar a API de diálogo para deixar que o usuário confirme o 
+  // Você também pode usar a API de diálogo para deixar que o usuário confirme o
   // fechamento do aplicativo.
-  e.returnValue = false;
-};
+  e.returnValue = false
+}
 ```
 
 ### Evento: 'closed'
@@ -165,9 +165,9 @@ Emitido quando o tamanho da janela está sendo alterado.
 
 Emitido quando está sendo movida para uma nova posição.
 
-__Note__: No OS X este evento é apenas um apelido de `moved`.
+__Note__: No macOS este evento é apenas um apelido de `moved`.
 
-### Evento: 'moved' _OS X_
+### Evento: 'moved' _macOS_
 
 Emitido uma vez quando a janela é movida para uma nova posição.
 
@@ -191,13 +191,13 @@ Emitido quando a janela sai do estado de tela cheia, ocasionado por uma api de h
 
 Emitido quando um [App Command](https://msdn.microsoft.com/en-us/library/windows/desktop/ms646275(v=vs.85).aspx) é invocado. Estes estão tipicamente relacionado às teclas de mídia do teclado, ou comandos do browser, assim como o botão "Voltar" existente em alguns modelos de mouse no Windows.
 
-```js
-someWindow.on('app-command', function(e, cmd) {
+```javascript
+someWindow.on('app-command', function (e, cmd) {
   // Navega a janela 'para trás' quando o usuário pressiona o botão voltar do mouse
   if (cmd === 'browser-backward' && someWindow.webContents.canGoBack()) {
-    someWindow.webContents.goBack();
+    someWindow.webContents.goBack()
   }
-});
+})
 ```
 
 ## Métodos
@@ -244,7 +244,7 @@ Objetos criados com `new BrowserWindow` possuem as seguintes propriedades:
 
 ```javascript
 // Neste exemplo `win` é a nossa instância
-var win = new BrowserWindow({ width: 800, height: 600 });
+var win = new BrowserWindow({ width: 800, height: 600 })
 ```
 
 ### `win.webContents`
@@ -331,7 +331,7 @@ Define se a janela deve estar em modo tela cheia.
 
 Retorna um boolean, indicando se a janela está em modo tela cheia.
 
-### `win.setAspectRatio(aspectRatio[, extraSize])` _OS X_
+### `win.setAspectRatio(aspectRatio[, extraSize])` _macOS_
 
 * `aspectRatio` A proporção que queremos manter para uma porção do conteúdo da *view*.
 * `extraSize` Object (opcional) - O tamanho extra não incluído enquanto a proporção é mantida. Propriedades:
@@ -493,23 +493,23 @@ Desengancha a mensagem de janela.
 
 Desengancha todas as mensagens de janela.
 
-### `win.setRepresentedFilename(filename)` _OS X_
+### `win.setRepresentedFilename(filename)` _macOS_
 
 * `filename` String
 
 Define o endereço do arquivo que a janela representa, e o ícone do arquivo será exibido na barra de título da janela.
 
-### `win.getRepresentedFilename()` _OS X_
+### `win.getRepresentedFilename()` _macOS_
 
 Retorna o endereço do arquivo que a janela representa.
 
-### `win.setDocumentEdited(edited)` _OS X_
+### `win.setDocumentEdited(edited)` _macOS_
 
 * `edited` Boolean
 
 Define se o documento da janela foi editado, e o ícone na barra de título se torna cinza quando definido como `true`.
 
-### `win.isDocumentEdited()` _OS X_
+### `win.isDocumentEdited()` _macOS_
 
 Retorna um boolean indicando se o documento da janela foi editado.
 
@@ -527,14 +527,6 @@ Retorna um boolean indicando se o documento da janela foi editado.
 * `callback` Function
 
 Captura uma imagem da página dentro do `rect`. Após completar, `callback` será chamada com `callback(imagem)`. `imagem` é uma instância de [NativeImage](../../../docs/api/native-image.md) que guarda dados sobre a imagem. Omitir `rect` captura toda a página visível.
-
-### `win.print([options])`
-
-Igual a `webContents.print([options])`
-
-### `win.printToPDF(options, callback)`
-
-Igual a `webContents.printToPDF(options, callback)`
 
 ### `win.loadURL(url[, options])`
 
@@ -589,7 +581,7 @@ Adiciona uma barra de ferramentes miniatura com um conjunto de botões específi
 
 O número de botões na barra de ferramentas miniatura não deve ser maior que 7 devido ao espaço limitado. Uma vez que você define a barra de ferramentas miniatura, ela não pode ser removida por causa da limitação da plataforma. Mas você pode chamar a API com um array vazio para limpar todos os botões.
 
-### `win.showDefinitionForSelection()` _OS X_
+### `win.showDefinitionForSelection()` _macOS_
 
 Mostra um dicionário *pop-up* que procura a palavra selecionada na página.
 
@@ -605,7 +597,7 @@ Se a barra de menu já estiver visível, chamar `setAutoHideMenuBar(true)` não 
 
 Retorna um boolean indicando se a barra de menu se esconde automaticamente.
 
-### `win.setMenuBarVisibility(visible)`
+### `win.setMenuBarVisibility(visible)` _Windows_ _Linux_
 
 * `visible` Boolean
 
@@ -628,5 +620,3 @@ Define se a janela deve estar visível em todos os *workspaces*.
 Retorna um boolean indicando se a janela está visível em todos os *workspaces*.
 
 **Nota:** Esta API sempre retorna `false` no Windows.
-
-

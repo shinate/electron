@@ -1,5 +1,7 @@
 # globalShortcut
 
+> Detect keyboard events when the application does not have keyboard focus.
+
 The `globalShortcut` module can register/unregister a global keyboard shortcut
 with the operating system so that you can customize the operations for various
 shortcuts.
@@ -9,31 +11,29 @@ not have the keyboard focus. You should not use this module until the `ready`
 event of the app module is emitted.
 
 ```javascript
-const electron = require('electron');
-const app = electron.app;
-const globalShortcut = electron.globalShortcut;
+const {app, globalShortcut} = require('electron')
 
-app.on('ready', function() {
-  // Register a 'ctrl+x' shortcut listener.
-  var ret = globalShortcut.register('ctrl+x', function() {
-    console.log('ctrl+x is pressed');
-  });
+app.on('ready', () => {
+  // Register a 'CommandOrControl+X' shortcut listener.
+  const ret = globalShortcut.register('CommandOrControl+X', () => {
+    console.log('CommandOrControl+X is pressed')
+  })
 
   if (!ret) {
-    console.log('registration failed');
+    console.log('registration failed')
   }
 
   // Check whether a shortcut is registered.
-  console.log(globalShortcut.isRegistered('ctrl+x'));
-});
+  console.log(globalShortcut.isRegistered('CommandOrControl+X'))
+})
 
-app.on('will-quit', function() {
+app.on('will-quit', () => {
   // Unregister a shortcut.
-  globalShortcut.unregister('ctrl+x');
+  globalShortcut.unregister('CommandOrControl+X')
 
   // Unregister all shortcuts.
-  globalShortcut.unregisterAll();
-});
+  globalShortcut.unregisterAll()
+})
 ```
 
 ## Methods
@@ -56,7 +56,7 @@ want applications to fight for global shortcuts.
 
 * `accelerator` [Accelerator](accelerator.md)
 
-Returns whether this application has registered `accelerator`.
+Returns `Boolean` - Whether this application has registered `accelerator`.
 
 When the accelerator is already taken by other applications, this call will
 still return `false`. This behavior is intended by operating systems, since they

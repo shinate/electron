@@ -5,10 +5,10 @@
 次の例は、最後のウィンドウが閉じたときにアプリケーションを終了させる方法を示しています。
 
 ```javascript
-const app = require('electron').app;
-app.on('window-all-closed', function() {
-  app.quit();
-});
+const app = require('electron').app
+app.on('window-all-closed', function () {
+  app.quit()
+})
 ```
 
 ## イベント
@@ -17,7 +17,7 @@ app.on('window-all-closed', function() {
 
 ### イベント: 'will-finish-launching'
 
-アプリケーションの基礎起動が終わったときに出力されます。Windows と Linuxでは、 `will-finish-launching` イベントと`ready`イベントは同じです。OS Xでは、`NSApplication`の `applicationWillFinishLaunching` 通知をに相当します。通常、`open-file`と`open-url` 用のリスナーの設定、クラッシュレポートの開始、自動アップデートをします。
+アプリケーションの基礎起動が終わったときに出力されます。Windows と Linuxでは、 `will-finish-launching` イベントと`ready`イベントは同じです。macOSでは、`NSApplication`の `applicationWillFinishLaunching` 通知をに相当します。通常、`open-file`と`open-url` 用のリスナーの設定、クラッシュレポートの開始、自動アップデートをします。
 
 ほとんどの場合、 `ready` イベントハンドラーですべてをするべきです。
 
@@ -58,7 +58,7 @@ Electronの初期化が終わった時に出力します。
 
 アプリケーションが終了したときに出力されます。
 
-### イベント: 'open-file' _OS X_
+### イベント: 'open-file' _macOS_
 
 戻り値:
 
@@ -71,7 +71,7 @@ Electronの初期化が終わった時に出力します。
 
 Windowsでは、ファイルパスを取得するために、 `process.argv` をパースする必要があります。
 
-### イベント: 'open-url' _OS X_
+### イベント: 'open-url' _macOS_
 
 戻り値:
 
@@ -82,7 +82,7 @@ Windowsでは、ファイルパスを取得するために、 `process.argv` を
 
 このイベントをハンドルしたい場合は、`event.preventDefault()`をコールすべきです。
 
-### イベント: 'activate' _OS X_
+### イベント: 'activate' _macOS_
 
 戻り値:
 
@@ -134,15 +134,15 @@ Windowsでは、ファイルパスを取得するために、 `process.argv` を
  `url` の  `certificate` 検証に失敗したときに発生します。証明書を信頼するために`event.preventDefault()` と `callback(true)`をコールして既定の動作を止める必要があります。
 
 ```javascript
-session.on('certificate-error', function(event, webContents, url, error, certificate, callback) {
-  if (url == "https://github.com") {
+session.on('certificate-error', function (event, webContents, url, error, certificate, callback) {
+  if (url === 'https://github.com') {
     // Verification logic.
-    event.preventDefault();
-    callback(true);
+    event.preventDefault()
+    callback(true)
   } else {
-    callback(false);
+    callback(false)
   }
-});
+})
 ```
 
 ### イベント: 'select-client-certificate'
@@ -162,9 +162,9 @@ session.on('certificate-error', function(event, webContents, url, error, certifi
 `url` は、クライアント証明書を要求するナビゲーションエントリーに対応し、`callback` リストからエントリをフィルターしてコールするのに必要です。`event.preventDefault()` を使用して、アプリケーションの証明書ストアから最初の証明書を使用するのを止めることができます。
 
 ```javascript
-app.on('select-client-certificate', function(event, webContents, url, list, callback) {
-  event.preventDefault();
-  callback(list[0]);
+app.on('select-client-certificate', function (event, webContents, url, list, callback) {
+  event.preventDefault()
+  callback(list[0])
 })
 ```
 
@@ -191,9 +191,9 @@ Returns:
 既定の動作ではすべての認証をキャンセルしたり、`event.preventDefault()` と `callback(username, password)` とを証明書でコールし既定の動作をとめてオーバーライドします。
 
 ```javascript
-app.on('login', function(event, webContents, request, authInfo, callback) {
-  event.preventDefault();
-  callback('username', 'secret');
+app.on('login', function (event, webContents, request, authInfo, callback) {
+  event.preventDefault()
+  callback('username', 'secret')
 })
 ```
 
@@ -237,7 +237,7 @@ gpu プロセスがクラッシュしたときに出力されます。
 * `appData` 既定で示すユーザーごとのアプリケーションディレクトリ
   * `%APPDATA%` Windows上
   * `$XDG_CONFIG_HOME` or `~/.config` Linux上
-  * `~/Library/Application Support` OS X上
+  * `~/Library/Application Support` macOS上
 * `userData` アプリの設定ファイルを格納するディレクトリで、既定では`appData` ディレクトリ配下のアプリ名ディレクトリです
 * `temp` 一時ディレクトリ
 * `exe` 現在の実行ファイル
@@ -274,15 +274,15 @@ gpu プロセスがクラッシュしたときに出力されます。
 
 現在のアプリケーションのロケールを戻します。
 
-### `app.addRecentDocument(path)` _OS X_ _Windows_
+### `app.addRecentDocument(path)` _macOS_ _Windows_
 
 * `path` String
 
 最近のドキュメント一覧に`path`を追加します。
 
-この一覧はOSが管理しています。Windowsではタスクバーからこの一覧を見れ、OS Xではdockメニューから見れます。
+この一覧はOSが管理しています。Windowsではタスクバーからこの一覧を見れ、macOSではdockメニューから見れます。
 
-### `app.clearRecentDocuments()` _OS X_ _Windows_
+### `app.clearRecentDocuments()` _macOS_ _Windows_
 
 最近のドキュメント一覧をクリアします。
 
@@ -321,30 +321,29 @@ The `callback` は、 `app`の`ready` イベントの出力後に実行するこ
 
 プロセスがアプリケーションのプライマリインスタンスでアプリがロードし続けるなら、このメソッドは `false`を戻します。プロセスがほかのインスタンスにパラメーターを送信し、`true`を戻すと、直ちに終了します。
 
-OS Xは、ユーザーがFinderで2つ目のアプリインスタンスを開いたり、`open-file` 、 `open-url`イベントが出力しようとすると、システムが自動的にシングルインスタンスを強制します。しかし、コマンドラインでアプリを開始するとシステムのシングルインスタンスメカニズムは無視されるので、シングルインスタンスを強制するためには、このメソッドを使う必要があります。
+macOSは、ユーザーがFinderで2つ目のアプリインスタンスを開いたり、`open-file` 、 `open-url`イベントが出力しようとすると、システムが自動的にシングルインスタンスを強制します。しかし、コマンドラインでアプリを開始するとシステムのシングルインスタンスメカニズムは無視されるので、シングルインスタンスを強制するためには、このメソッドを使う必要があります。
 
 2つ目のインスタンスを起動するとき、メインのインスタンスのウィンドウをアクティブにする例
 
-```js
-var myWindow = null;
+```javascript
+var myWindow = null
 
-var shouldQuit = app.makeSingleInstance(function(commandLine, workingDirectory) {
+var shouldQuit = app.makeSingleInstance(function (commandLine, workingDirectory) {
   // Someone tried to run a second instance, we should focus our window
   if (myWindow) {
-    if (myWindow.isMinimized()) myWindow.restore();
-    myWindow.focus();
+    if (myWindow.isMinimized()) myWindow.restore()
+    myWindow.focus()
   }
-  return true;
-});
+  return true
+})
 
 if (shouldQuit) {
-  app.quit();
-  return;
+  app.quit()
 }
 
-// Create myWindow, load the rest of the app, etc...
-app.on('ready', function() {
-});
+app.on('ready', function () {
+  // Create myWindow, load the rest of the app, etc...
+})
 ```
 
 ### `app.setAppUserModelId(id)` _Windows_
@@ -359,24 +358,24 @@ app.on('ready', function() {
 
 使用例:
 
-```js
-let browserOptions = {width: 1000, height: 800};
+```javascript
+let browserOptions = {width: 1000, height: 800}
 
 // Make the window transparent only if the platform supports it.
 if (process.platform !== 'win32' || app.isAeroGlassEnabled()) {
-  browserOptions.transparent = true;
-  browserOptions.frame = false;
+  browserOptions.transparent = true
+  browserOptions.frame = false
 }
 
 // Create the window.
-win = new BrowserWindow(browserOptions);
+win = new BrowserWindow(browserOptions)
 
 // Navigate.
 if (browserOptions.transparent) {
-  win.loadURL('file://' + __dirname + '/index.html');
+  win.loadURL(`file://${__dirname}/index.html`)
 } else {
   // No transparency, so we load a fallback that uses basic styles.
-  win.loadURL('file://' + __dirname + '/fallback.html');
+  win.loadURL(`file://${__dirname}/fallback.html`)
 }
 ```
 
@@ -392,7 +391,7 @@ Chromiumのコマンドダインに引数を追加します。引数は正しく
 
 **Note:** `process.argv`に影響しません。
 
-### `app.dock.bounce([type])` _OS X_
+### `app.dock.bounce([type])` _macOS_
 
 * `type` String (optional) - `critical` または `informational`を指定できます。既定では、 `informational`です。
 
@@ -402,37 +401,37 @@ Chromiumのコマンドダインに引数を追加します。引数は正しく
 
 リクエストを示すIDを戻します。
 
-### `app.dock.cancelBounce(id)` _OS X_
+### `app.dock.cancelBounce(id)` _macOS_
 
 * `id` Integer
 
 `id`のバウンスをキャンセルします。
 
-### `app.dock.setBadge(text)` _OS X_
+### `app.dock.setBadge(text)` _macOS_
 
 * `text` String
 
 dockのバッジエリアで表示する文字列を設定します。
 
-### `app.dock.getBadge()` _OS X_
+### `app.dock.getBadge()` _macOS_
 
 dockのバッジ文字列を戻します。
 
-### `app.dock.hide()` _OS X_
+### `app.dock.hide()` _macOS_
 
 dock アイコンを隠します。
 
-### `app.dock.show()` _OS X_
+### `app.dock.show()` _macOS_
 
 dock アイコンを表示します。
 
-### `app.dock.setMenu(menu)` _OS X_
+### `app.dock.setMenu(menu)` _macOS_
 
 * `menu` Menu
 
 アプリケーションの[dock menu][dock-menu]を設定します。
 
-### `app.dock.setIcon(image)` _OS X_
+### `app.dock.setIcon(image)` _macOS_
 
 * `image` [NativeImage](native-image.md)
 
